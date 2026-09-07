@@ -24,8 +24,12 @@ A non-individual account (CI/CD, integrations, bots) exempt from the Individual 
 _Avoid_: Bot account, system account.
 
 **Finding**:
-A discrepancy between actual access and policy that the Agent identifies during a review (orphaned, dormant admin-level, unapproved, drifted, or unresolved-identity access). Always cites the specific source record(s) it's based on, and stays open until closed: remediated, accepted as risk, or otherwise resolved. Gets its own GitHub Issue.
-_Avoid_: Issue (an Issue is the GitHub artifact a Finding produces, not the Finding itself), violation, flag.
+A discrepancy between actual access and policy that the Agent identifies during a review (orphaned, dormant admin-level, dormant ad-hoc [v1.1 — not yet surfaced in reports until promoted], unapproved, drifted, or identity resolution). Always cites the specific source record(s) it's based on, and stays open until closed: remediated, accepted as risk, or otherwise resolved. Gets its own GitHub Issue.
+_Avoid_: Issue (an Issue is the GitHub artifact a Finding produces, not the Finding itself), violation, flag, unresolved-identity access (superseded name — Identity resolution is the category, and it covers both an unresolved identity and a stale service-account owner, not just the unresolved case).
+
+**Risk Assessment Entry**:
+A per-category, per-system synthesis across a quarter's Findings, produced only in the Quarterly Audit Report's Risk Assessment section: a deterministic likelihood × impact score paired with a narrative justification and treatment recommendation. Not a Finding: cites Findings as evidence but never gets its own GitHub Issue.
+_Avoid_: Finding (a Risk Assessment Entry is built from Findings, not one itself), Risk (too generic — this is a specific report artifact).
 
 **Escalation**:
 A Finding the Agent raises to the Security/Compliance Reviewer immediately, outside the regular report cadence. Triggered solely by a finding still open past its own category's next Operational-cadence deadline (the Unremediated findings principle) — a category with no Operational cadence of its own (everything except Orphaned, in v1) has nothing to escalate against, and stays fully documented in the Quarterly Audit Report regardless.
