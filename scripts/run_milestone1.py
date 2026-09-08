@@ -4,6 +4,9 @@ Pure Python, no model call - Orphaned is deterministic (eval-cases.md's
 Tier 1, ADR-0006). Not the real eval harness yet (that's evals/cases/ in
 full, later milestones) - this is the seed of it: run each fixture, diff
 findings against expected.json, per SPEC.md's grading approach.
+
+(CI verification: this comment exists only to trigger the eval workflow
+on a real PR for the first time - safe to remove once confirmed.)
 """
 
 import json
