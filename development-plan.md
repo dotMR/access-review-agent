@@ -2,8 +2,6 @@
 
 A walking-skeleton build order: every milestone is a working, end-to-end slice — never a component built in isolation and integrated later. Each one names what's built, what it proves, and which `eval-cases.md` cases become a required-passing gate before moving to the next milestone. Small pieces, always testable, always real (even Milestone 1 talks to a real tool, not a mock of the whole system).
 
-**Prerequisite decision, before Milestone 1:** the local-vs-remote ADR (deferred in `iam-review-agent-design.md`, "once implementation starts") needs resolving now — Milestone 2 needs a real answer for how `open_issue` behaves locally vs. in CI. Resolve it as its own quick ADR once code exists to make the decision concrete, per its original deferral condition.
-
 **Runtime: Python.** The Claude Agent SDK is officially available for Python and TypeScript only, with symmetric feature coverage (subagents, hooks, MCP, permissions, sessions) — the SDK itself doesn't favor either. Python was chosen for ecosystem fit with this project's actual workload: `csv`/`pandas` for the core reconciliation logic (reading and joining HRIS/access CSVs, anti-joins, threshold comparisons), and mature HTML/Markdown-to-PDF rendering (WeasyPrint, ReportLab) for the aggregate report's PDF export, versus TypeScript's comparatively thin tabular-data tooling and its PDF options mostly routing through a headless browser. GitHub API access uses a third-party library (PyGithub or similar) rather than GitHub's own first-party Octokit, a real but minor trade-off against the ecosystem fit on the other two points.
 
 ---
@@ -17,7 +15,7 @@ Single subagent (AWS only), `read_access_data` + `read_hris` tools, Orphaned det
 
 ## Milestone 2 — First real write: `open_issue` and the grounding guardrail, built together
 
-Add `open_issue` (title/body/label format from `SPEC.md` §4) and the grounding/citation validation step that runs *before* any Issue write — built as one unit, not retrofitted after the write path already exists carelessly. Resolves the local-vs-remote prerequisite decision concretely: dry-run adapter first, real GitHub API second.
+Add `open_issue` (title/body/label format from `SPEC.md` §4) and the grounding/citation validation step that runs *before* any Issue write — built as one unit, not retrofitted after the write path already exists carelessly. This is also where the local-vs-remote ADR (deferred in `iam-review-agent-design.md` until "implementation starts," which this milestone is) gets formally filed — the design (single entrypoint, dry-run-capable adapter isolating GitHub calls, env-var-based secrets either way) is already written in that doc's Local vs. remote section, so filing it here is transcription plus whatever the real build surfaces, not fresh design work. Dry-run adapter first, real GitHub API second.
 
 **Proves:** the agent can write to a real external system, and the core evidentiary guardrail is load-bearing from day one, not asserted later.
 **Gate:** eval case 37 (grounding/citation) passes; a real Issue opens against a scratch repo with the correct title/body/labels.
