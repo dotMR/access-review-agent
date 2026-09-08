@@ -24,7 +24,7 @@ A non-individual account (CI/CD, integrations, bots) exempt from the Individual 
 _Avoid_: Bot account, system account.
 
 **Finding**:
-A discrepancy between actual access and policy that the Agent identifies during a review (orphaned, dormant admin-level, dormant ad-hoc [v1.1 — not yet surfaced in reports until promoted], unapproved, drifted, or identity resolution). Always cites the specific source record(s) it's based on, and stays open until closed: remediated, accepted as risk, or otherwise resolved. Gets its own GitHub Issue.
+A discrepancy between actual access and policy that the Agent identifies during a review (orphaned, dormant admin-level, dormant ad-hoc, unapproved, drifted, or identity resolution). Always cites the specific source record(s) it's based on, and stays open until closed: remediated, accepted as risk, or otherwise resolved. Gets its own GitHub Issue.
 _Avoid_: Issue (an Issue is the GitHub artifact a Finding produces, not the Finding itself), violation, flag, unresolved-identity access (superseded name — Identity resolution is the category, and it covers both an unresolved identity and a stale service-account owner, not just the unresolved case).
 
 **Risk Assessment Entry**:
@@ -32,10 +32,10 @@ A per-category, per-system synthesis across a quarter's Findings, produced only 
 _Avoid_: Finding (a Risk Assessment Entry is built from Findings, not one itself), Risk (too generic — this is a specific report artifact).
 
 **Escalation**:
-A Finding the Agent raises to the Security/Compliance Reviewer immediately, outside the regular report cadence. Triggered solely by a finding still open past its own category's next Operational-cadence deadline (the Unremediated findings principle) — a category with no Operational cadence of its own (everything except Orphaned, in v1) has nothing to escalate against, and stays fully documented in the Quarterly Audit Report regardless.
+A Finding the Agent raises to the Security/Compliance Reviewer immediately, outside the regular report cadence. Triggered solely by a finding still open past its own category's next Operational-cadence deadline (the Unremediated findings principle) — a category with no Operational cadence of its own (everything except Orphaned, in v1) has nothing to escalate against, and stays fully documented in the Quarterly Audit Report regardless. Fires at most once per Finding: once escalated, the Agent never escalates that same Finding a second time, even if it stays open across further cycles — sustained non-remediation past that point is what Risk Assessment's recurrence scoring is for, not a repeated Escalation.
 
 **Accepted Risk**:
-A human decision (Reviewer or Asset Owner) to stop treating an open Finding as needing remediation, applied as an `accepted-risk` label on the Finding's Issue with a required comment recording the justification. No expiry planned in v1 — the Agent checks for the label on each run and stops re-flagging the Finding as open, but never re-reviews or re-surfaces it automatically.
+A human decision (Reviewer or Asset Owner) to stop treating an open Finding as needing remediation, applied as an `accepted-risk` label on the Finding's Issue with a required comment recording the justification. Applying the label **closes the Issue**, the same action as remediation — distinguished only by the label persisting on the closed Issue as the permanent record of why (see ADR-0005). This keeps "open" meaning the same thing everywhere (the monthly report, resolution-status counts, SLA re-checks): a closed, accepted-risk Issue stays fully visible and filterable by its label, just not counted as needing attention. No expiry planned in v1 — the underlying condition is never re-reviewed or re-surfaced automatically once accepted.
 
 ## Actors
 
