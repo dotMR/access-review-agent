@@ -11,3 +11,4 @@ Lightweight ADRs for the Access Review Agent: Context / Decision / Consequences,
 | [0003](./0003-monthly-summary-as-informational-not-new-detection.md) | Monthly Operational Flags: informational summary, with monthly detection | Accepted |
 | [0004](./0004-role-access-mapping-single-source-no-markdown-duplicate.md) | `role-access-mapping.yaml` as single source, no Markdown duplicate | Accepted |
 | [0005](./0005-issue-lifecycle-escalation-and-accepted-risk-closure.md) | Issue lifecycle semantics: Escalation mechanism and Accepted Risk closure | Accepted |
+| [0006](./0006-no-model-call-for-deterministic-categories.md) | No model call at all for deterministic (Tier 1) categories | Accepted |

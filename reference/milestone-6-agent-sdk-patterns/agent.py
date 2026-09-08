@@ -1,9 +1,15 @@
-"""Milestone 1: single subagent, AWS only, Orphaned detection.
+"""Reference: Agent SDK wiring pattern for a category that needs real reasoning.
 
-Wires read_access_data + read_hris through the Agent SDK and asks the
-model to reason over the results, rather than hand-writing the anti-join
-in Python - proving the tool-to-reasoning pipeline works, even for a
-category simple enough that the reasoning itself is trivial.
+Originally written for Milestone 1's Orphaned check, before ADR-0006
+established that deterministic categories need no model call at all -
+kept here as a working pattern for Milestone 6 (Identity resolution),
+the first category that actually needs this. See README.md in this
+directory for the non-obvious bug this avoids re-discovering, and for
+why this file is copy-from, not import-from.
+
+The system prompt and TIER_1_MODEL choice below are Orphaned-specific
+leftovers from that original version - replace both for whatever
+category and model this is adapted for; don't carry them over unexamined.
 """
 
 import json
@@ -13,8 +19,13 @@ from typing import Any
 
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, create_sdk_mcp_server, query
 
-from access_review_agent.tools.access_data import make_read_access_data_tool
-from access_review_agent.tools.hris import make_read_hris_tool
+from tools.access_data import make_read_access_data_tool
+from tools.hris import make_read_hris_tool
+
+# Example only - Tier 1 turned out not to need a model call at all
+# (ADR-0006). Pick a real model for whatever category this is adapted
+# for, informed by what its reasoning actually requires.
+EXAMPLE_MODEL = "haiku"
 
 SYSTEM_PROMPT = """\
 You are the AWS subagent of a joiner-mover-leaver access review agent. \
@@ -67,6 +78,7 @@ def build_options(data_dir: Path) -> ClaudeAgentOptions:
             "mcp__access_review__read_access_data",
             "mcp__access_review__read_hris",
         ],
+        model=EXAMPLE_MODEL,
     )
 
 
@@ -77,18 +89,22 @@ def extract_json_block(text: str) -> dict[str, Any]:
     return json.loads(match.group(1))
 
 
-async def run_orphaned_check(data_dir: Path) -> dict[str, Any]:
-    """Run the AWS Orphaned check against fixture data in data_dir.
+async def run_check(data_dir: Path) -> tuple[dict[str, Any], float]:
+    """Run the check against fixture data in data_dir.
 
-    Returns the parsed findings dict extracted from the model's response.
+    Returns (findings dict, cost in USD). The key pattern: extract text
+    via ResultMessage.result, never by stringifying raw SDK message
+    objects - see this directory's README for why that silently breaks.
     """
     options = build_options(data_dir)
     result_text: str | None = None
+    cost_usd = 0.0
     async for message in query(prompt="Check AWS for orphaned access.", options=options):
         if isinstance(message, ResultMessage):
             result_text = message.result
+            cost_usd = message.total_cost_usd or 0.0
 
     if result_text is None:
         raise RuntimeError("Agent run finished without a ResultMessage")
 
-    return extract_json_block(result_text)
+    return extract_json_block(result_text), cost_usd

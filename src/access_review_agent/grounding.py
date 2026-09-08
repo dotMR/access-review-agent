@@ -14,8 +14,8 @@ of open_issue.
 from pathlib import Path
 from typing import Any
 
-from access_review_agent.tools.access_data import _read_and_validate as read_access_data
-from access_review_agent.tools.hris import _read_and_validate as read_hris
+from access_review_agent.tools.access_data import read_and_validate as read_access_data
+from access_review_agent.tools.hris import read_and_validate as read_hris
 
 
 class GroundingError(Exception):

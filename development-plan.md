@@ -8,14 +8,14 @@ A walking-skeleton build order: every milestone is a working, end-to-end slice �
 
 ## Milestone 1 — Read one file, apply one deterministic check, print the result
 
-Single subagent (AWS only), `read_access_data` + `read_hris` tools, Orphaned detection only (the simplest category: an anti-join plus a status check, no thresholds). Output is a logged finding, not yet an Issue.
+Orphaned detection (AWS only) — the simplest category: an anti-join plus a status check, no thresholds. **Plain Python, no model call** (ADR-0006) — a deterministic check gains nothing from an LLM, not even a cheap one; the read-and-validate functions in `tools/` and the detection logic in `detection/orphaned.py` are the real implementation. Output is a logged finding, not yet an Issue. (An initial version of this milestone did route Orphaned through the Agent SDK before ADR-0006 corrected course — that working integration code is preserved, not lost, in `reference/milestone-6-agent-sdk-patterns/` for reuse once Milestone 6 actually needs it.)
 
-Also builds the grounding/citation **validation logic** now, not in Milestone 2 — `validate_finding()`, which independently re-reads the source data to confirm a claimed finding is actually true, trusting nothing about what happened during the model's own tool calls. This is split from Milestone 2 deliberately: the validation logic itself doesn't depend on `open_issue` existing, and building it now closes a real gap in this milestone's own eval gate — without it, a hallucinated finding that happens to match `expected.json` would pass. Milestone 2 reuses this function unchanged as the gate in front of `open_issue`; it isn't rebuilt there.
+Also builds the grounding/citation **validation logic** now, not in Milestone 2 — `validate_finding()`, which independently re-reads the source data to confirm a claimed finding is actually true. For Tier 1 this is defense-in-depth against bugs in the detection code itself, not hallucination (deterministic Python can't hallucinate) — but it runs the same way regardless of whether a finding came from Python or, later, a model, so the write-gate in front of `open_issue` (Milestone 2) never needs to special-case which. Building it now closes a real gap in this milestone's own eval gate — without it, a finding that happens to match `expected.json` for the wrong reason would still pass.
 
-Two orchestration surfaces are in play from the start, and they're not on the same schedule. The **production workflow** (push-triggered on data commits, monthly/quarterly cron) stays deferred to Milestone 5 exactly as before — it depends on dispatch logic, Issue-writing, and reports that don't exist yet. The **eval/CI workflow** (`iam-review-agent-design.md`'s Evals section — a separate workflow, triggered on any PR touching agent code/prompts/tools) is cheap enough not to defer: it needs nothing but a runnable eval script, which this milestone already produces. Sequencing within this milestone: get the three cases passing **locally first** — debugging the SDK integration and CI at the same time is worse than one at a time — then wire the eval CI workflow before calling the milestone done. From here on, "Gate: Tier X cases pass" means CI verifies it on every push, not that someone ran a script locally once.
+Two orchestration surfaces are in play from the start, and they're not on the same schedule. The **production workflow** (push-triggered on data commits, monthly/quarterly cron) stays deferred to Milestone 5 exactly as before — it depends on dispatch logic, Issue-writing, and reports that don't exist yet. The **eval/CI workflow** (`iam-review-agent-design.md`'s Evals section — a separate workflow, triggered on any PR touching agent code/prompts/tools) was held off deliberately once real API cost showed up during Milestone 1's original Agent-SDK-based version — but with Tier 1 now running no model call at all, that specific cost objection no longer applies to Milestones 1, 3, 4, and 5. Worth revisiting explicitly once Tier 2 (Milestone 6 onward) reintroduces real per-run cost, rather than assuming the original decision still holds unexamined.
 
-**Proves:** the read-tool-to-reasoning pipeline works against real fixture data, verified in CI, with every claimed finding independently confirmed against the source data rather than just pattern-matched against `expected.json`.
-**Gate:** Tier 1 cases 1–3 (Orphaned) pass, locally first, then in the eval CI workflow. Eval case 37 (grounding/citation) also passes here — moved up from Milestone 2, see above.
+**Proves:** the read-and-validate-and-detect pipeline works against real fixture data, with every claimed finding independently confirmed against the source data rather than just pattern-matched against `expected.json`.
+**Gate:** Tier 1 cases 1–3 (Orphaned) pass. Eval case 37 (grounding/citation) also passes here — moved up from Milestone 2, see above.
 
 ## Milestone 2 — First real write: `open_issue`, reusing the grounding gate
 
@@ -26,17 +26,17 @@ Add `open_issue` (title/body/label format from `SPEC.md` §4), gated by `validat
 
 ## Milestone 3 — Round out AWS's deterministic categories
 
-Add Dormant admin-level, Dormant ad-hoc, Unapproved, Drift to the same single subagent. No new architecture — same tools, same write path, more checks.
+Add Dormant admin-level, Dormant ad-hoc, Unapproved, Drift to `detection/`. Still no model call (ADR-0006) — same pure-Python pattern as Orphaned, same tools, same write path, more checks.
 
 **Proves:** the detection loop holds multiple check types without needing a redesign.
 **Gate:** Tier 1 cases 4–16 all pass.
 
-## Milestone 4 — Subagent isolation: expand to all five systems
+## Milestone 4 — Isolation: expand to all five systems
 
-Build the actual architecture from ADR-0001: one shared read implementation, five pre-bound subagent instances (no `system_name` parameter), main agent as the sole orchestrator and Issue-writer. Still manually/locally triggered — no GitHub Actions yet.
+Build the actual architecture from ADR-0001: one shared read implementation, five pre-bound detection units (no `system_name` parameter), main agent as the sole orchestrator and Issue-writer. Still plain Python for all five at this point — Tier 2's reasoning-based subagents don't arrive until Milestone 6, but the isolation boundary is identical either way: what matters is that a unit of detection code (Python function or, later, an LLM tool call) can only ever reach its own system's file, not whether an LLM is involved. Still manually/locally triggered — no GitHub Actions yet.
 
-**Proves:** the isolation boundary is structural, not just described. Verify directly: a subagent's tool registry provably cannot reach another system's file.
-**Gate:** a targeted architecture check (not a numbered eval case — this is a registry-inspection test, not a data-fixture one) confirming each subagent's available tools are exactly its own system's.
+**Proves:** the isolation boundary is structural, not just described. Verify directly: a detection unit's available data access provably cannot reach another system's file.
+**Gate:** a targeted architecture check (not a numbered eval case — this is a registry-inspection test, not a data-fixture one) confirming each unit's available data access is exactly its own system's.
 
 ## Milestone 5 — Real trigger: GitHub Actions and the dispatch rule
 
@@ -47,7 +47,7 @@ Wire the push-triggered production workflow: single-system commits scope to one 
 
 ## Milestone 6 — Identity resolution: first reasoning capability
 
-Build the four-outcome resolution logic and its restraint property (decline to guess on insufficient or ambiguous evidence).
+**The first point the Agent SDK is actually used** (ADR-0006) — every prior milestone's detection stayed plain Python because nothing before this genuinely needed a model. Build the four-outcome resolution logic and its restraint property (decline to guess on insufficient or ambiguous evidence), reusing the working tool-wiring/`ClaudeAgentOptions`/JSON-extraction patterns preserved in `reference/milestone-6-agent-sdk-patterns/` — copy from it, don't import it, since the surrounding code has moved on since it was written; the README there also names a non-obvious bug (extract text via `ResultMessage.result`, not by stringifying raw message objects) worth reading before re-deriving it the hard way. Model choice for this milestone is a real decision to make here, informed by what the reasoning actually requires — not inherited from the Haiku-for-Tier-1 exploration that turned out not to apply.
 
 **Proves:** the system's first genuine LLM-reasoning step, with the citation/restraint discipline that's supposed to make it safe to automate.
 **Gate:** Tier 2 cases 17–22 pass. Also verify eval case 38 (input safety) now — this is the first point `provisioning_note` content actually reaches a reasoning step, so it's the first point that guardrail can be meaningfully tested rather than just asserted.
