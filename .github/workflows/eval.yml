@@ -1,0 +1,41 @@
+name: Eval Suite
+
+# Separate from the (not-yet-built) production workflow - triggered on any
+# PR touching agent code/prompts/tools, not on a schedule. Per
+# iam-review-agent-design.md's Evals section: this is the quality gate,
+# the production workflow is the operational cadence, and conflating the
+# two would mean each interferes with the other.
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "evals/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/eval.yml"
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync
+
+      # Milestone 1 scope: the three Orphaned eval cases only, plain
+      # Python, no model call (ADR-0006) - no ANTHROPIC_API_KEY needed
+      # here. That changes at Milestone 6, when Identity resolution
+      # brings the first real model call and its real per-run cost -
+      # revisit this workflow then, don't add the secret back until it's
+      # actually needed. This step will also expand to a general runner
+      # discovering all of evals/cases/ as later milestones add more
+      # categories - see development-plan.md.
+      - name: Run eval suite
+        run: uv run python scripts/run_milestone1.py
