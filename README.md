@@ -1,8 +1,12 @@
 # Access Review Agent
 
-An agent that runs a joiner-mover-leaver (JML) access review, cross-referencing HR and IT access data against policy to flag orphaned, dormant (admin-level and ad-hoc), unapproved, drifted, and identity-resolution findings.
+## Why this exists
 
-The agent runs on three triggers: push-triggered whenever a commit touches source access data, HR data, or policy config in this repository; a monthly cron for an informational summary; and a quarterly cron for the formal audit record (`SPEC.md` §2).
+I posted a thought on LinkedIn while thinking about my next role: you can't credibly sell customers transformational AI while your own internal operations still run on the manual processes AI is meant to replace. This project is that thesis made concrete.
+
+Joiner-mover-leaver access review is normally a periodic, manual checklist — exactly the kind of control a well-staffed team lets slip, not from indifference but because continuously reviewing every system is tedious. This agent runs that review continuously instead, reasoning through cases a lookup can't: a shared login that's either a documented exception or a real violation depending on a justification note nobody but a human — or this agent — would actually read. When the evidence isn't there, it says so instead of guessing — and every claim it makes cites the specific record behind it.
+
+It cross-references HR and IT access data against policy to flag orphaned, dormant (admin-level and ad-hoc), unapproved, drifted, and identity-resolution findings, and runs on three triggers: push-triggered whenever a commit touches source access data, HR data, or policy config in this repository; a monthly cron for an informational summary; and a quarterly cron for the formal audit record (`SPEC.md` §2).
 
 Built to explore agentic-systems: tool calling, agent orchestration, retrieval, guardrails, and evals.
 
