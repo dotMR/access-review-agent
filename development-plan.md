@@ -10,8 +10,10 @@ A walking-skeleton build order: every milestone is a working, end-to-end slice �
 
 Single subagent (AWS only), `read_access_data` + `read_hris` tools, Orphaned detection only (the simplest category: an anti-join plus a status check, no thresholds). Output is a logged finding, not yet an Issue.
 
-**Proves:** the read-tool-to-reasoning pipeline works against real fixture data.
-**Gate:** Tier 1 cases 1–3 (Orphaned) pass.
+Two orchestration surfaces are in play from the start, and they're not on the same schedule. The **production workflow** (push-triggered on data commits, monthly/quarterly cron) stays deferred to Milestone 5 exactly as before — it depends on dispatch logic, Issue-writing, and reports that don't exist yet. The **eval/CI workflow** (`iam-review-agent-design.md`'s Evals section — a separate workflow, triggered on any PR touching agent code/prompts/tools) is cheap enough not to defer: it needs nothing but a runnable eval script, which this milestone already produces. Sequencing within this milestone: get the three cases passing **locally first** — debugging the SDK integration and CI at the same time is worse than one at a time — then wire the eval CI workflow before calling the milestone done. From here on, "Gate: Tier X cases pass" means CI verifies it on every push, not that someone ran a script locally once.
+
+**Proves:** the read-tool-to-reasoning pipeline works against real fixture data, verified in CI.
+**Gate:** Tier 1 cases 1–3 (Orphaned) pass, locally first, then in the eval CI workflow.
 
 ## Milestone 2 — First real write: `open_issue` and the grounding guardrail, built together
 
