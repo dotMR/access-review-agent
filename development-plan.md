@@ -92,4 +92,4 @@ Run `demo-timeline.md`'s actual 14-commit sequence end-to-end against a real (or
 
 ---
 
-**Past Milestone 12:** the v1.1 candidates already sketched (Dormant/Drift's own Operational tier, the grant-time Unapproved gate, Predictive prioritization, Certification-triage by novelty, Policy-to-config drift detection, contractor end-date expiry) are natural next milestones, each already scoped in `iam-review-agent-design.md` and `SPEC.md` §8 whenever this project picks back up past v1.
+**Past Milestone 12:** the out-of-scope candidates already sketched (Dormant/Drift's own Operational tier, the grant-time Unapproved gate, contractor end-date expiry — see `SPEC.md` §8; Predictive prioritization, Certification-triage by novelty, Policy-to-config drift detection — see `future-capabilities.md`) are natural next milestones whenever this project picks back up past v1. None are scheduled; nothing here commits to building any of them.

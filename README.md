@@ -24,7 +24,8 @@ Three artifacts, in order of how current they are:
 - **`SPEC.md`** — the settled, implementation-facing shape: data schemas, trigger/dispatch rules, the tool registry, finding definitions, report structure, guardrails.
 - **`development-plan.md`** — the walking-skeleton build order, milestone by milestone.
 - **`eval-cases.md`** — the 40-case eval suite each milestone is graded against.
-- **`iam-review-agent-design.md`** — the design rationale, including candidate capabilities considered and not (yet) built.
+- **`iam-review-agent-design.md`** — the design rationale.
+- **`future-capabilities.md`** — reasoning-capability candidates considered but not built, kept separate so the design doc stays focused on what actually exists.
 - **`docs/adr/`** — architecturally significant decisions (Context/Decision/Consequences), one file per decision.
 - **`access-control-policy.md`**, **`role-access-mapping.yaml`**, **`policy-config.yaml`** — the policy this agent enforces: human-readable Principles, the Role → Access Mapping and System Criticality, and the machine-consumed thresholds and scoring tables, respectively.
 - **`demo-timeline.md`** — the concrete, commit-by-commit scenario the demo repository's history is seeded from.

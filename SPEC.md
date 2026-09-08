@@ -57,7 +57,7 @@ Invokes all five subagents for a full reconciliation run — same mechanism as a
 
 ### Not implemented in v1
 
-Dormant admin-level's and Drift's own **Operational, SLA-bearing, escalation-eligible** cadence (as opposed to their quarterly-only Evidentiary classification) is still v1.1. This is a distinct question from "how often does detection run" — the monthly trigger above runs full detection monthly, but a Finding it catches is still Evidentiary/quarterly-classified, with no SLA and no Escalation eligibility. Deliberately kept separate: Escalation is reserved for genuinely acute risk (Orphaned), and persistence across quarters is already the Risk Assessment's recurrence-scoring's job — giving every persistent Dormant/Drift finding its own Escalation would reintroduce the clutter this whole design works to avoid.
+Dormant admin-level's and Drift's own **Operational, SLA-bearing, escalation-eligible** cadence (as opposed to their quarterly-only Evidentiary classification) is still out of scope. This is a distinct question from "how often does detection run" — the monthly trigger above runs full detection monthly, but a Finding it catches is still Evidentiary/quarterly-classified, with no SLA and no Escalation eligibility. Deliberately kept separate: Escalation is reserved for genuinely acute risk (Orphaned), and persistence across quarters is already the Risk Assessment's recurrence-scoring's job — giving every persistent Dormant/Drift finding its own Escalation would reintroduce the clutter this whole design works to avoid.
 
 ---
 
@@ -95,11 +95,11 @@ Every category cites the specific source record(s) it's based on. A Finding stay
 | Category | Detection rule | Cadence (v1 Core) | Status |
 | :-- | :-- | :-- | :-- |
 | **Orphaned access** | Access record's identifier matches an HRIS record with `status=terminated` | Event-triggered (same-day, on the triggering commit) **and** Evidentiary/quarterly | Core |
-| **Dormant admin-level access** | `access_level=admin`, `status=active`, `last_used_date` > 90 consecutive days ago | Evidentiary/quarterly only | Core (monthly Operational variant is v1.1) |
-| **Dormant ad-hoc access** | Ad-hoc (non-baseline) access, unused > 180 consecutive days | Evidentiary/quarterly only | Core (monthly Operational variant is v1.1) |
-| **Unapproved access** | `approved_by` is null | Evidentiary/quarterly only | Core (grant-time immediate gate is v1.1) |
+| **Dormant admin-level access** | `access_level=admin`, `status=active`, `last_used_date` > 90 consecutive days ago | Evidentiary/quarterly only | Core (monthly Operational variant out of scope) |
+| **Dormant ad-hoc access** | Ad-hoc (non-baseline) access, unused > 180 consecutive days | Evidentiary/quarterly only | Core (monthly Operational variant out of scope) |
+| **Unapproved access** | `approved_by` is null | Evidentiary/quarterly only | Core (grant-time immediate gate out of scope) |
 | **Identity resolution** | See below | Evidentiary/quarterly only | Core |
-| **Drift** | Access doesn't match the mapping for the employee's *current* role after a role change | Evidentiary/quarterly only | Core (monthly Operational variant is v1.1) |
+| **Drift** | Access doesn't match the mapping for the employee's *current* role after a role change | Evidentiary/quarterly only | Core (monthly Operational variant out of scope) |
 
 ### Orphaned vs. Identity resolution — the anti-join distinction
 
@@ -130,7 +130,7 @@ See ADR-0005 for the full reasoning. Applied to the Finding's **existing** Issue
 
 **No assignee.** This is a public repo about a fictional company (`access-control-policy.md`) — there is no real GitHub account behind "the Security/Compliance Reviewer" to assign or notify, and assigning every escalation to one real person (or failing against a nonexistent one) would misrepresent the mechanism. Escalation's actual job here is recorded visibility, not live notification: `is:open label:escalated` surfaces every escalation across the repo's history, the Issue's own comment timeline shows exactly when it escalated relative to when it was first flagged, and the aggregate quarterly report's "Escalations this period" table (`report-template-quarterly-audit.md`) already gives a scannable, aggregated view on top of that — a reviewer never has to dig through individual Issues to find them.
 
-**Considered and not built:** a GitHub Projects (v2) board with a custom "Owner"/"Status" field, for a dashboard-style role display. The information it would show already exists via the system label (Asset Owner is a strict 1:1 relationship with a system — the system label already identifies the owner) and the `escalated` label (Escalation is by definition raised to the Reviewer). Would add a real, separate API surface and new tools for a marginal display improvement over label filtering that already works — a real v1.1-style enhancement if a dashboard layer is ever wanted, not v1 scope.
+**Considered and not built:** a GitHub Projects (v2) board with a custom "Owner"/"Status" field, for a dashboard-style role display. The information it would show already exists via the system label (Asset Owner is a strict 1:1 relationship with a system — the system label already identifies the owner) and the `escalated` label (Escalation is by definition raised to the Reviewer). Would add a real, separate API surface and new tools for a marginal display improvement over label filtering that already works — a real future enhancement if a dashboard layer is ever wanted, not v1 scope.
 
 Same "no real account" reasoning is *also* why Monthly Operational Flags' PR-with-reviewer-request delivery mechanism was rejected (ADR-0003) — not only because a scripted demo can't authentically exercise live engagement, but because there's no real Asset Owner account to request review from in the first place.
 
@@ -202,8 +202,8 @@ From `iam-review-agent-design.md`'s Guardrails section, restated as commitments:
 **In:**
 Orphaned (both variants), Dormant admin-level (Evidentiary only), Dormant ad-hoc (Evidentiary only), Unapproved (Evidentiary only), Identity resolution, Drift (Evidentiary only), Risk Assessment synthesis, Unremediated-findings Escalation (fires at most once per Finding — ADR-0003), the Monthly Operational Flags summary (runs full detection monthly to catch quiet systems, but stays informational — not evidentiary, no SLA, no Escalation eligibility — ADR-0003), the trend line, remediation re-check/auto-close, Accepted Risk.
 
-**Out (v1.1):**
-Dormant admin-level's monthly Operational variant, Dormant ad-hoc's own monthly Operational variant, Drift's monthly Operational variant, the grant-time Unapproved gate, Predictive prioritization, Certification-triage by novelty, Policy-to-config drift detection, contractor end-date expiry detection. Each of the three monthly Operational variants is a deliberate product boundary (Escalation reserved for genuinely acute risk, per Orphaned), not a cost cut — see `iam-review-agent-design.md` for the reasoning.
+**Out of scope:**
+Dormant admin-level's monthly Operational variant, Dormant ad-hoc's own monthly Operational variant, Drift's monthly Operational variant, the grant-time Unapproved gate, contractor end-date expiry detection. Each of the three monthly Operational variants is a deliberate product boundary (Escalation reserved for genuinely acute risk, per Orphaned), not a cost cut — see `iam-review-agent-design.md` for the reasoning. See `future-capabilities.md` for larger, more substantial candidate capabilities (Predictive prioritization, Certification-triage by novelty, Policy-to-config drift detection) kept separate from this list given their depth.
 
-**Deferred, not scoped as v1.1 or v1 Core:**
+**Deferred:**
 The local-vs-remote ADR (ADR candidate, deferred until implementation surfaces whether it's a real problem — see `iam-review-agent-design.md`, Local vs. remote). The PDF generation mechanism (which tool/library renders the aggregate report's Markdown to PDF) — a mechanical rendering step with no reasoning in it, so eval cases test Markdown content only and don't cover PDF output.

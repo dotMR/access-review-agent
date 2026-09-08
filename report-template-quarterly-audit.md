@@ -77,4 +77,4 @@ I have reviewed this report and the underlying per-system reports, and accept th
 - PDF export: {{PDF_FILENAME}} (generated {{GENERATED_TIMESTAMP}})
 
 ---
-<!-- v1.1 (not shown in this report): Dormant admin-level's, Dormant ad-hoc's, and Drift's own monthly Operational/SLA variants, and the Unapproved-access grant-time gate — see SPEC.md §8. -->
+<!-- Out of scope (not shown in this report): Dormant admin-level's, Dormant ad-hoc's, and Drift's own monthly Operational/SLA variants, and the Unapproved-access grant-time gate — see SPEC.md §8. -->
