@@ -235,8 +235,8 @@ What this agent doesn't catch, stated up front rather than left implicit. Being 
 - **A dry-run-capable adapter** isolates the one thing that's genuinely different between local and remote: talking to GitHub. Real API calls in one implementation, logging-only in another, selected by a flag. Built before the real integration, not after, so every earlier development step already exercises the dry-run path.
 - **Secrets follow the same pattern**: a local `.env` (gitignored) for optional testing against the real API, GitHub Actions repo secrets in CI, same environment variable names either way, the code never knows which source it came from.
 - **The eval harness needs none of this.** It's local by design, testing the core reconciliation logic against fixtures with no GitHub dependency at all, which is what keeps the dev loop fast: iterate locally, confirm in CI, not the other way around.
-- **GitHub Actions is the real acceptance bar, local is a development convenience.** The guiding principle is that the agent should be runnable locally, but a local run isn't what the design is ultimately judged against — the GitHub Actions workflow is. Whether local-vs-remote parity is even a real problem worth its own ADR is itself deferred: revisit once there's actual implementation experience showing it either holds cleanly or needs a documented decision.
-- Candidate for its own ADR once implementation starts (see Decision record, below). Deferred for now.
+- **GitHub Actions is the real acceptance bar, local is a development convenience.** The guiding principle is that the agent should be runnable locally, but a local run isn't what the design is ultimately judged against — the GitHub Actions workflow is.
+- Filed as ADR-0007 once Milestone 2 implemented it — see `docs/adr/0007-local-vs-remote-dry-run-adapter.md` for the as-built design (dry-run-default adapter, `GITHUB_WRITE_MODE` flag, `GITHUB_TOKEN` resolution).
 
 ### Data and config formats
 

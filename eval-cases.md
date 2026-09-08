@@ -105,3 +105,7 @@ Not classification — does the system's plumbing (dispatch, scoring lookups, li
 **Config drift (if Policy-to-config drift detection is built — otherwise skip, this tier depends on that capability existing)**
 
 40. **Semantic drift caught.** `access-control-policy.md`'s Dormant Admin-level Principle reworded to a different threshold (e.g., "120 consecutive days"), `policy-config.yaml`'s `admin_level_days` left at 90. → Flagged as a mismatch, citing both the Principle text and the config value compared.
+
+**Issue formatting (SPEC.md §4)**
+
+41. **Issue format correctness.** A grounded finding, formatted via `open_issue()` in dry-run mode. → Title, labels, and body match `SPEC.md` §4's format exactly (title pattern, category + system labels, every category-specific body field present). Dry-run only — no live GitHub call needed to check formatting, so this runs in CI same as Tier 1.

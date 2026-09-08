@@ -22,7 +22,7 @@ Two orchestration surfaces are in play from the start, and they're not on the sa
 Add `open_issue` (title/body/label format from `SPEC.md` §4), gated by `validate_finding()` from Milestone 1 — reused unchanged, not rebuilt, since the validation logic never depended on `open_issue` existing in the first place. This is also where the local-vs-remote ADR (deferred in `iam-review-agent-design.md` until "implementation starts," which this milestone is) gets formally filed — the design (single entrypoint, dry-run-capable adapter isolating GitHub calls, env-var-based secrets either way) is already written in that doc's Local vs. remote section, so filing it here is transcription plus whatever the real build surfaces, not fresh design work. Dry-run adapter first, real GitHub API second.
 
 **Proves:** the agent can write to a real external system, and the grounding guardrail actually gates that write path, not just a detection-time check.
-**Gate:** a real Issue opens against a scratch repo with the correct title/body/labels; an ungrounded finding is confirmed to *not* open one.
+**Gate:** a real Issue opened against a scratch repo with the correct title/body/labels (verified once, by hand); Tier 3 cases 37 (grounding, routed through `open_issue` itself) and 41 (Issue formatting) pass automatically in CI via `scripts/run_milestone2.py`, dry-run only — no live GitHub call needed to check formatting or rejection.
 
 ## Milestone 3 — Round out AWS's deterministic categories
 
@@ -41,6 +41,8 @@ Build the actual architecture from ADR-0001: one shared read implementation, fiv
 ## Milestone 5 — Real trigger: GitHub Actions and the dispatch rule
 
 Wire the push-triggered production workflow: single-system commits scope to one subagent, HRIS/policy-config/role-mapping commits fan out to all five, `access-control-policy.md` triggers nothing. Least-privilege `GITHUB_TOKEN` scoping (`permissions: issues: write, contents: read`) lands here too — it's a workflow-file concern, not a separate milestone.
+
+Also the natural point to upgrade the Issue body's Source record citation (SPEC.md §4) from a bare file path to a clickable GitHub blob permalink (`.../blob/<sha>/<path>`) — the triggering commit SHA is ordinary CI context once a real trigger exists (`GITHUB_SHA` in Actions), it just has nowhere to come from before this milestone.
 
 **Proves:** the dispatch table is real CI behavior, not just a documented rule.
 **Gate:** Tier 3 cases 25–28 (dispatch) pass.

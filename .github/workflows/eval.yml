@@ -29,13 +29,17 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      # Milestone 1 scope: the three Orphaned eval cases only, plain
-      # Python, no model call (ADR-0006) - no ANTHROPIC_API_KEY needed
-      # here. That changes at Milestone 6, when Identity resolution
-      # brings the first real model call and its real per-run cost -
-      # revisit this workflow then, don't add the secret back until it's
-      # actually needed. This step will also expand to a general runner
-      # discovering all of evals/cases/ as later milestones add more
-      # categories - see development-plan.md.
-      - name: Run eval suite
+      # Milestone 1+2 scope so far: plain Python detection (ADR-0006) plus
+      # open_issue's dry-run adapter (ADR-0007) - no ANTHROPIC_API_KEY and
+      # no GITHUB_TOKEN needed here, since dry-run mode is the default and
+      # makes no network call. That changes at Milestone 6, when Identity
+      # resolution brings the first real model call and its real per-run
+      # cost - revisit this workflow then, don't add the secret back until
+      # it's actually needed. These steps will collapse into a general
+      # runner discovering all of evals/cases/ as later milestones add
+      # more categories - see development-plan.md.
+      - name: Run Milestone 1 eval suite
         run: uv run python scripts/run_milestone1.py
+
+      - name: Run Milestone 2 eval suite
+        run: uv run python scripts/run_milestone2.py
