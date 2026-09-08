@@ -188,10 +188,10 @@ Every quarter also produces a tagged **GitHub Release**, pinning the commit (cod
 From `iam-review-agent-design.md`'s Guardrails section, restated as commitments:
 
 - **Tool-permission scoping** — no grant/revoke capability anywhere in the registry (§3).
-- **Grounding/citation checks** — every Finding must cite the exact source record; a validation step confirms it exists with the claimed properties before it becomes an Issue. Runs once per run, in the main agent (ADR-0001).
+- **Grounding/citation checks** — every Finding must cite the exact source record; a validation step confirms it exists with the claimed properties before it becomes an Issue. Runs once per run, in the main agent (ADR-0001). Proven by eval case 37 (`eval-cases.md`).
 - **Human-in-the-loop publish gate** — the quarterly Release (and possibly individual Issues) requires approval before publishing.
 - **Fail-loud completeness** — every report shows every category explicitly, including "No findings." Malformed source data errors visibly rather than producing a quietly incomplete report. Per ADR-0001: a failure is scoped to the affected system — the run still publishes what it has for the other four, with an explicit failed-system line, rather than aborting entirely.
-- **Input safety** — HRIS/access-data fields (name, role, notes) are read as inert data, never as instructions. Proven by an eval case (§ eval case set, next session), not just asserted.
+- **Input safety** — HRIS/access-data fields (name, role, notes) are read as inert data, never as instructions. Proven by eval case 38 (`eval-cases.md`), not just asserted.
 - **Cost/budget control** — a tool-call/iteration cap exists; the number is unpinned until there's real run data (§3).
 - **Least-privilege CI credentials** — `GITHUB_TOKEN` explicitly scoped in workflow YAML (`permissions: issues: write, contents: read`), not left at default breadth.
 
