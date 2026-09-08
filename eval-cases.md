@@ -108,4 +108,4 @@ Not classification — does the system's plumbing (dispatch, scoring lookups, li
 
 **Issue formatting (SPEC.md §4)**
 
-41. **Issue format correctness.** A grounded finding, formatted via `open_issue()` in dry-run mode. → Title, labels, and body match `SPEC.md` §4's format exactly (title pattern, category + system labels, every category-specific body field present). Dry-run only — no live GitHub call needed to check formatting, so this runs in CI same as Tier 1.
+41. **Issue format correctness.** A grounded finding, formatted via `open_issue()` in dry-run mode. → Title, labels, and body match `SPEC.md` §4's format exactly (title pattern, category + system labels, every category-specific body field present). Dry-run only — no live GitHub call needed to check formatting, so this runs in CI same as Tier 1. Checked once per category that has an `open_issue`-integrated grounding validator: Orphaned (Milestone 2), then Dormant admin-level, Dormant ad-hoc, Unapproved, and Drift (Milestone 3).
