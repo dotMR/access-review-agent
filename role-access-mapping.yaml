@@ -7,8 +7,10 @@
 # always a structured table, never policy prose, so there's no narrative-
 # readability need a YAML format doesn't already satisfy).
 #
-# Access levels: none | read | write | admin. Some entries carry a scope note
-# (e.g. Contractor's GitHub access is repo-scoped, VPN access is contract-limited)
+# Access levels: none | read | write | admin — except vpn, which is binary
+# (none | granted): network access has no read/write/admin distinction of its
+# own, unlike the other four systems. Some entries carry a scope note (e.g.
+# Contractor's GitHub access is repo-scoped, VPN access is contract-limited)
 # — kept as free-text `note` fields alongside the level, not modeled further in v1.
 
 role_access_mapping:
@@ -18,7 +20,7 @@ role_access_mapping:
       github: { level: write }
       salesforce: { level: none }
       finance_erp: { level: none }
-      vpn: { level: yes }
+      vpn: { level: granted }
 
   - role: Engineering Manager
     access:
@@ -26,7 +28,7 @@ role_access_mapping:
       github: { level: admin }
       salesforce: { level: none }
       finance_erp: { level: none }
-      vpn: { level: yes }
+      vpn: { level: granted }
 
   - role: Asset Owner
     access:
@@ -34,7 +36,7 @@ role_access_mapping:
       github: { level: admin }
       salesforce: { level: admin, note: user management only }
       finance_erp: { level: none }
-      vpn: { level: yes }
+      vpn: { level: granted }
 
   - role: HR Admin
     access:
@@ -42,7 +44,7 @@ role_access_mapping:
       github: { level: none }
       salesforce: { level: none }
       finance_erp: { level: read }
-      vpn: { level: yes }
+      vpn: { level: granted }
 
   - role: Finance Analyst
     access:
@@ -50,7 +52,7 @@ role_access_mapping:
       github: { level: none }
       salesforce: { level: read }
       finance_erp: { level: write }
-      vpn: { level: yes }
+      vpn: { level: granted }
 
   - role: Sales Rep
     access:
@@ -58,7 +60,7 @@ role_access_mapping:
       github: { level: none }
       salesforce: { level: write }
       finance_erp: { level: none }
-      vpn: { level: yes }
+      vpn: { level: granted }
 
   - role: Executive (C-level)
     access:
@@ -66,7 +68,7 @@ role_access_mapping:
       github: { level: none }
       salesforce: { level: read }
       finance_erp: { level: read }
-      vpn: { level: yes }
+      vpn: { level: granted }
 
   - role: Contractor
     access:
@@ -74,7 +76,7 @@ role_access_mapping:
       github: { level: write, note: scoped to assigned repo only }
       salesforce: { level: none }
       finance_erp: { level: none }
-      vpn: { level: yes, note: time-limited to contract end date }
+      vpn: { level: granted, note: time-limited to contract end date }
 
 # Fixed per-system criticality rating. Feeds the Impact axis of Risk Assessment
 # scoring (see ADR-0002) — a lookup, not a judgment call at reasoning time.
