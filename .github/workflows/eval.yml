@@ -29,7 +29,7 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      # Milestone 1+2 scope so far: plain Python detection (ADR-0006) plus
+      # Milestone 1-3 scope so far: plain Python detection (ADR-0006) plus
       # open_issue's dry-run adapter (ADR-0007) - no ANTHROPIC_API_KEY and
       # no GITHUB_TOKEN needed here, since dry-run mode is the default and
       # makes no network call. That changes at Milestone 6, when Identity
@@ -43,3 +43,6 @@ jobs:
 
       - name: Run Milestone 2 eval suite
         run: uv run python scripts/run_milestone2.py
+
+      - name: Run Milestone 3 eval suite
+        run: uv run python scripts/run_milestone3.py

@@ -1,11 +1,14 @@
 """Issue formatting and creation: SPEC.md §4's Issue format, gated by the
 grounding guardrail.
 
-open_issue() is the one function Milestone 2 needs to prove: a real Issue
-opens with the correct title/body/labels, and an ungrounded finding does
-not open one. Only the "orphaned" category is wired up here - grounding.py
-only validates that category so far, and adding a new category to this
-module means adding its grounding check first, not the other way around.
+open_issue() is the function Milestone 2 proved: a real Issue opens with
+the correct title/body/labels, and an ungrounded finding does not open
+one. A category is wired up here only once grounding.py has its own
+validator for it - adding a new category means adding its grounding
+check first, not the other way around (Milestone 3 added the four
+Tier 1 categories that came after Orphaned; Identity resolution and
+Drift's Tier 2 reasoning-based cousins are not in scope until
+Milestone 6 onward).
 """
 
 from pathlib import Path
@@ -16,6 +19,10 @@ from access_review_agent.grounding import validate_finding
 
 CATEGORY_TITLES = {
     "orphaned": "Orphaned access",
+    "dormant-admin": "Dormant admin-level access",
+    "dormant-ad-hoc": "Dormant ad-hoc access",
+    "unapproved": "Unapproved access",
+    "drift": "Drift",
 }
 
 SYSTEM_DISPLAY_NAMES = {
@@ -43,12 +50,24 @@ def _format_body(finding: dict[str, Any]) -> str:
         f"**Expected per policy:** {finding['expected_per_policy']}",
     ]
 
-    if finding["category"] == "orphaned":
+    category = finding["category"]
+    if category == "orphaned":
         lines.append(f"**Date detected:** {finding['date_detected']}")
         lines.append(
             "**Time to revoke:** same day as detection (Orphaned SLA — "
             "access-control-policy.md, Operational review)"
         )
+    elif category in ("dormant-admin", "dormant-ad-hoc"):
+        lines.append(f"**Last used:** {finding['last_used_date']}")
+        lines.append(f"**Days dormant:** {finding['days_dormant']}")
+    elif category == "unapproved":
+        lines.append(f"**Date granted:** {finding['granted_date']}")
+        lines.append(f"**Approved by:** {finding['approved_by'] or 'none on file'}")
+    elif category == "drift":
+        for change in finding["role_change_history"]:
+            lines.append(
+                f"**Role change ({change['date']}):** {change['old_role']} → {change['new_role']}"
+            )
 
     lines.append(
         f"**Source record:** `{source['file']}`, row matching "

@@ -26,10 +26,12 @@ Add `open_issue` (title/body/label format from `SPEC.md` §4), gated by `validat
 
 ## Milestone 3 — Round out AWS's deterministic categories
 
-Add Dormant admin-level, Dormant ad-hoc, Unapproved, Drift to `detection/`. Still no model call (ADR-0006) — same pure-Python pattern as Orphaned, same tools, same write path, more checks.
+Add Dormant admin-level, Dormant ad-hoc, Unapproved, Drift to `detection/`. Still no model call (ADR-0006) — same pure-Python pattern as Orphaned, same tools, same write path, more checks. Adds the `read_policy` tool (`tools/policy.py`, SPEC.md §3) — a generic YAML reader shared by `policy-config.yaml` (thresholds) and `role-access-mapping.yaml` (the baseline-access lookup Dormant ad-hoc and Drift both need). `grounding.py` and `github/issues.py` extend to all four new categories alongside detection itself — a category isn't wired into the write path (Milestone 2) as an afterthought, it lands with its own grounding validator and Issue-body fields in the same commit as its detection logic.
 
-**Proves:** the detection loop holds multiple check types without needing a redesign.
-**Gate:** Tier 1 cases 4–16 all pass.
+The two dormancy categories' eval fixtures pin an explicit `as_of` reference date (in `expected.json`) rather than comparing against `date.today()` — a boundary case (89/90/91 days) authored against one date would otherwise silently start failing as real wall-clock time passes it. `detect_dormant_admin`/`detect_dormant_ad_hoc` take `as_of` as an optional override for exactly this reason; production calls leave it unset and get real "today." The grounding gate follows the same discipline from the source-record side: it recomputes each dormancy finding's day-count from `last_used_date` and the finding's own `date_detected`, never from `date.today()` either, so a grounding check run days after detection still agrees with what detection actually found.
+
+**Proves:** the detection loop holds multiple check types without needing a redesign, and the write path (grounding + `open_issue`) genuinely generalizes rather than being Orphaned-specific.
+**Gate:** Tier 1 cases 4–16 pass; the Issue-formatting case (41) passes for each of the four new categories too, alongside Orphaned's from Milestone 2 — all in `scripts/run_milestone3.py`, dry-run only, no credentials.
 
 ## Milestone 4 — Isolation: expand to all five systems
 
