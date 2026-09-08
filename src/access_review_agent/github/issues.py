@@ -43,7 +43,7 @@ def _format_title(finding: dict[str, Any]) -> str:
     return f"{category_display} — {identity} ({system_display})"
 
 
-def _format_body(finding: dict[str, Any]) -> str:
+def _format_body(finding: dict[str, Any], repo_full_name: str, commit_sha: str | None) -> str:
     source = finding["source_record"]
     lines = [
         f"**Access detail:** {finding['access_level']} access to {finding['system_name']}",
@@ -69,10 +69,22 @@ def _format_body(finding: dict[str, Any]) -> str:
                 f"**Role change ({change['date']}):** {change['old_role']} → {change['new_role']}"
             )
 
-    lines.append(
-        f"**Source record:** `{source['file']}`, row matching "
-        f"`employee_id={source['employee_id']}`"
-    )
+    if commit_sha:
+        # data/ is production's fixed DATA_DIR convention (scripts/run_production.py) -
+        # the only caller that ever supplies commit_sha, so this coupling is narrow
+        # and documented rather than inferred. Eval/dry-run callers pass no SHA and
+        # get the plain bare-filename citation instead, matching their data_dir
+        # (evals/cases/<case>/, not data/) - a permalink there would point nowhere.
+        blob_url = f"https://github.com/{repo_full_name}/blob/{commit_sha}/data/{source['file']}"
+        lines.append(
+            f"**Source record:** [`{source['file']}`]({blob_url}), row matching "
+            f"`employee_id={source['employee_id']}`"
+        )
+    else:
+        lines.append(
+            f"**Source record:** `{source['file']}`, row matching "
+            f"`employee_id={source['employee_id']}`"
+        )
     return "\n\n".join(lines)
 
 
@@ -82,9 +94,19 @@ def _format_labels(finding: dict[str, Any]) -> list[str]:
     return [category_label, system_label]
 
 
-def open_issue(finding: dict[str, Any], repo_full_name: str, data_dir: Path) -> IssueResult:
+def open_issue(
+    finding: dict[str, Any],
+    repo_full_name: str,
+    data_dir: Path,
+    commit_sha: str | None = None,
+) -> IssueResult:
     """Validate `finding` against source data (the grounding gate), then
     open a GitHub Issue for it via the dry-run-capable adapter.
+
+    `commit_sha`, when given, upgrades the Issue body's Source record
+    citation from a bare file path to a clickable GitHub blob permalink
+    (Milestone 5) - only the real production entrypoint ever has a real
+    triggering commit SHA to supply; eval/dry-run callers leave it unset.
 
     Raises GroundingError (from grounding.py) without opening anything if
     the finding doesn't hold up against data_dir's source records.
@@ -95,6 +117,6 @@ def open_issue(finding: dict[str, Any], repo_full_name: str, data_dir: Path) -> 
     return adapter.create_issue(
         repo_full_name=repo_full_name,
         title=_format_title(finding),
-        body=_format_body(finding),
+        body=_format_body(finding, repo_full_name, commit_sha),
         labels=_format_labels(finding),
     )

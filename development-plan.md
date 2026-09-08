@@ -44,12 +44,14 @@ The isolation check doesn't just assert the boundary, it tries to break it: each
 
 ## Milestone 5 — Real trigger: GitHub Actions and the dispatch rule
 
-Wire the push-triggered production workflow: single-system commits scope to one subagent, HRIS/policy-config/role-mapping commits fan out to all five, `access-control-policy.md` triggers nothing. Least-privilege `GITHUB_TOKEN` scoping (`permissions: issues: write, contents: read`) lands here too — it's a workflow-file concern, not a separate milestone.
+Wire the push-triggered production workflow (`.github/workflows/production.yml`): single-system commits scope to one subagent, HRIS/policy-config/role-mapping commits fan out to all five, `access-control-policy.md` isn't in the trigger's paths at all so a commit touching only that file never fires the workflow. Least-privilege `GITHUB_TOKEN` scoping (`permissions: issues: write, contents: read`) lands here too — it's a workflow-file concern, not a separate milestone. The dispatch decision itself (`dispatch.py`'s `determine_dispatch()`) is a pure function over a changed-file list, deliberately GitHub-Actions-agnostic — the same function is unit-tested locally in `scripts/run_milestone5.py` and called for real from the production workflow's git-diff step.
 
-Also the natural point to upgrade the Issue body's Source record citation (SPEC.md §4) from a bare file path to a clickable GitHub blob permalink (`.../blob/<sha>/<path>`) — the triggering commit SHA is ordinary CI context once a real trigger exists (`GITHUB_SHA` in Actions), it just has nowhere to come from before this milestone.
+`GITHUB_WRITE_MODE` stays unset in the committed workflow (dry-run, ADR-0007's default) — there's no `data/` directory yet for a real run to act on (that's the separate, not-yet-started demo-dataset build), and flipping to real mode is a deliberate later decision, not a side effect of wiring the trigger. The trigger and dispatch mechanics themselves were still verified as real CI behavior, not just a documented rule: a throwaway branch adding a scratch `data/access_aws.csv` and temporarily pointing the workflow's `REPO_FULL_NAME`/`GITHUB_WRITE_MODE`/`GITHUB_TOKEN` at the scratch repo (via a new `SCRATCH_REPO_TOKEN` secret, since the default `GITHUB_TOKEN` Actions provides can't write to a different repo) confirmed the push trigger fires, dispatches correctly, and opens a real Issue there — then was closed without merging, so none of that lands on `main`.
+
+Also the natural point to upgrade the Issue body's Source record citation (SPEC.md §4) from a bare file path to a clickable GitHub blob permalink (`.../blob/<sha>/<path>`) — done here: `open_issue`/`run_full_reconciliation` take an optional `commit_sha`, and `scripts/run_production.py` passes Actions' own `GITHUB_SHA` through. The `data/` prefix in the permalink is a narrow, documented assumption (production's fixed `DATA_DIR` convention) rather than something threaded through every finding's `source_record` — eval/dry-run callers never pass a `commit_sha`, so they keep the plain bare-filename citation, which is correct for their own `data_dir` (`evals/cases/<case>/`, not `data/`).
 
 **Proves:** the dispatch table is real CI behavior, not just a documented rule.
-**Gate:** Tier 3 cases 25–28 (dispatch) pass.
+**Gate:** Tier 3 cases 25–28 (dispatch) pass — locally via `scripts/run_milestone5.py` (dry-run, no credentials, wired into the eval CI workflow) and live via the throwaway-branch verification above.
 
 ## Milestone 6 — Identity resolution: first reasoning capability
 
