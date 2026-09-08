@@ -10,17 +10,19 @@ A walking-skeleton build order: every milestone is a working, end-to-end slice �
 
 Single subagent (AWS only), `read_access_data` + `read_hris` tools, Orphaned detection only (the simplest category: an anti-join plus a status check, no thresholds). Output is a logged finding, not yet an Issue.
 
+Also builds the grounding/citation **validation logic** now, not in Milestone 2 — `validate_finding()`, which independently re-reads the source data to confirm a claimed finding is actually true, trusting nothing about what happened during the model's own tool calls. This is split from Milestone 2 deliberately: the validation logic itself doesn't depend on `open_issue` existing, and building it now closes a real gap in this milestone's own eval gate — without it, a hallucinated finding that happens to match `expected.json` would pass. Milestone 2 reuses this function unchanged as the gate in front of `open_issue`; it isn't rebuilt there.
+
 Two orchestration surfaces are in play from the start, and they're not on the same schedule. The **production workflow** (push-triggered on data commits, monthly/quarterly cron) stays deferred to Milestone 5 exactly as before — it depends on dispatch logic, Issue-writing, and reports that don't exist yet. The **eval/CI workflow** (`iam-review-agent-design.md`'s Evals section — a separate workflow, triggered on any PR touching agent code/prompts/tools) is cheap enough not to defer: it needs nothing but a runnable eval script, which this milestone already produces. Sequencing within this milestone: get the three cases passing **locally first** — debugging the SDK integration and CI at the same time is worse than one at a time — then wire the eval CI workflow before calling the milestone done. From here on, "Gate: Tier X cases pass" means CI verifies it on every push, not that someone ran a script locally once.
 
-**Proves:** the read-tool-to-reasoning pipeline works against real fixture data, verified in CI.
-**Gate:** Tier 1 cases 1–3 (Orphaned) pass, locally first, then in the eval CI workflow.
+**Proves:** the read-tool-to-reasoning pipeline works against real fixture data, verified in CI, with every claimed finding independently confirmed against the source data rather than just pattern-matched against `expected.json`.
+**Gate:** Tier 1 cases 1–3 (Orphaned) pass, locally first, then in the eval CI workflow. Eval case 37 (grounding/citation) also passes here — moved up from Milestone 2, see above.
 
-## Milestone 2 — First real write: `open_issue` and the grounding guardrail, built together
+## Milestone 2 — First real write: `open_issue`, reusing the grounding gate
 
-Add `open_issue` (title/body/label format from `SPEC.md` §4) and the grounding/citation validation step that runs *before* any Issue write — built as one unit, not retrofitted after the write path already exists carelessly. This is also where the local-vs-remote ADR (deferred in `iam-review-agent-design.md` until "implementation starts," which this milestone is) gets formally filed — the design (single entrypoint, dry-run-capable adapter isolating GitHub calls, env-var-based secrets either way) is already written in that doc's Local vs. remote section, so filing it here is transcription plus whatever the real build surfaces, not fresh design work. Dry-run adapter first, real GitHub API second.
+Add `open_issue` (title/body/label format from `SPEC.md` §4), gated by `validate_finding()` from Milestone 1 — reused unchanged, not rebuilt, since the validation logic never depended on `open_issue` existing in the first place. This is also where the local-vs-remote ADR (deferred in `iam-review-agent-design.md` until "implementation starts," which this milestone is) gets formally filed — the design (single entrypoint, dry-run-capable adapter isolating GitHub calls, env-var-based secrets either way) is already written in that doc's Local vs. remote section, so filing it here is transcription plus whatever the real build surfaces, not fresh design work. Dry-run adapter first, real GitHub API second.
 
-**Proves:** the agent can write to a real external system, and the core evidentiary guardrail is load-bearing from day one, not asserted later.
-**Gate:** eval case 37 (grounding/citation) passes; a real Issue opens against a scratch repo with the correct title/body/labels.
+**Proves:** the agent can write to a real external system, and the grounding guardrail actually gates that write path, not just a detection-time check.
+**Gate:** a real Issue opens against a scratch repo with the correct title/body/labels; an ungrounded finding is confirmed to *not* open one.
 
 ## Milestone 3 — Round out AWS's deterministic categories
 
