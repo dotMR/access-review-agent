@@ -35,10 +35,12 @@ The two dormancy categories' eval fixtures pin an explicit `as_of` reference dat
 
 ## Milestone 4 — Isolation: expand to all five systems
 
-Build the actual architecture from ADR-0001: one shared read implementation, five pre-bound detection units (no `system_name` parameter), main agent as the sole orchestrator and Issue-writer. Still plain Python for all five at this point — Tier 2's reasoning-based subagents don't arrive until Milestone 6, but the isolation boundary is identical either way: what matters is that a unit of detection code (Python function or, later, an LLM tool call) can only ever reach its own system's file, not whether an LLM is involved. Still manually/locally triggered — no GitHub Actions yet.
+Build the actual architecture from ADR-0001: one shared read implementation (already existed since Milestone 1 — `tools/access_data.py`/`hris.py` were always system-agnostic), five pre-bound detection units (`units.py`'s `SystemDetectionUnit`, `system_name` fixed at construction, `detect_all()` takes no parameters), main agent as the sole orchestrator and Issue-writer (`orchestrator.py`'s `run_full_reconciliation` — the only caller of `open_issue` anywhere in the codebase; units never import `github/`). Still plain Python for all five at this point — Tier 2's reasoning-based subagents don't arrive until Milestone 6, but the isolation boundary is identical either way: what matters is that a unit of detection code (Python function or, later, an LLM tool call) can only ever reach its own system's file, not whether an LLM is involved. Still manually/locally triggered — no GitHub Actions yet.
+
+The isolation check doesn't just assert the boundary, it tries to break it: each unit runs twice against `evals/cases/milestone4-all-systems/` (one finding per system, five different categories) — once with all five systems' files present, once against a data_dir holding *only* that unit's own access file plus HRIS, the other four absent entirely rather than merely unused. Identical success and identical findings in both runs is real evidence a unit never depended on another system's file — if it had, the isolated run would raise `FileNotFoundError`, not quietly pass.
 
 **Proves:** the isolation boundary is structural, not just described. Verify directly: a detection unit's available data access provably cannot reach another system's file.
-**Gate:** a targeted architecture check (not a numbered eval case — this is a registry-inspection test, not a data-fixture one) confirming each unit's available data access is exactly its own system's.
+**Gate:** a targeted architecture check (not a numbered eval case — this is a registry-inspection test, not a data-fixture one) confirming each unit's available data access is exactly its own system's, run via `scripts/run_milestone4.py`, dry-run only, no credentials.
 
 ## Milestone 5 — Real trigger: GitHub Actions and the dispatch rule
 
