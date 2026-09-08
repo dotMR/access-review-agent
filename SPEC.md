@@ -28,7 +28,7 @@ For *why*, see `iam-review-agent-design.md` (design rationale) and `docs/adr/` (
 
 ### Access file schema (identical across all five systems)
 
-`employee_id` (or a local identifier for VPN/Finance ERP), `system_name` (redundant with the file itself — same-file consistency check), `access_level` (`read` / `write` / `admin`), `granted_date`, `approved_by` (null, `"auto (granted per role policy)"`, or the Asset Owner's identifier), `last_used_date`, `status` (`active` / `revoked`), `provisioning_note` (free text; populated only for records Identity resolution needs to reason over — service accounts, shared identifiers, SSO-gap local identifiers)
+`employee_id` (or a local identifier for VPN/Finance ERP), `system_name` (redundant with the file itself — same-file consistency check), `access_level` (`read` / `write` / `admin`; VPN uses `none` / `granted` instead — network access is binary, not leveled, per `role-access-mapping.yaml`), `granted_date`, `approved_by` (null, `"auto (granted per role policy)"`, or the Asset Owner's identifier), `last_used_date`, `status` (`active` / `revoked`), `provisioning_note` (free text; populated only for records Identity resolution needs to reason over — service accounts, shared identifiers, SSO-gap local identifiers)
 
 ---
 
