@@ -4,7 +4,7 @@ This is the settled *what*: data shapes, trigger/dispatch rules, tool registry, 
 
 For *why*, see `iam-review-agent-design.md` (design rationale) and `docs/adr/` (architecturally significant decisions). For vocabulary and actors, see `CONTEXT.md`. For the formal policy this agent enforces, see `access-control-policy.md`.
 
-**Status:** v1 Core not yet implemented. `role-access-mapping.yaml`, `policy-config.yaml`, and this spec are done; the eval case set is the remaining pre-implementation artifact.
+**Status:** v1 Core not yet implemented. All pre-implementation design artifacts are complete — see `development-plan.md` for the build order, starting at Milestone 1.
 
 ---
 
