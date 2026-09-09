@@ -10,7 +10,7 @@ It cross-references HR and IT access data against policy to flag orphaned, dorma
 
 Built to explore agentic-systems: tool calling, agent orchestration, retrieval, guardrails, and evals.
 
-**Status:** in design, not yet implemented — see `development-plan.md` for the build order. The walkthrough below describes how to review the repository once the agent has run against the seeded demo timeline — there's no live data yet.
+**Status:** in active development — 6 of 12 milestones built and merged (real detection logic, real GitHub Issue writing, real GitHub Actions dispatch, real Identity resolution via the Agent SDK); see `development-plan.md` for progress and what's left. The walkthrough below describes how to review the repository once the agent has run against the seeded demo timeline — there's no live data yet, so none of this exists in the repository today.
 
 ## Reviewing the repository
 
