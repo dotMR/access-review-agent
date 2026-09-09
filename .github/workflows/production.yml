@@ -38,8 +38,13 @@ permissions:
 # queues a run behind whatever's already in flight rather than cancelling
 # it - a cancelled mid-run could leave writes half-done, worse than
 # waiting a little longer for a queued one.
+#
+# Shared group name (not "production-review") because monthly-report.yml
+# also calls run_full_reconciliation with the same lifecycle checks
+# (Milestone 10) - the two workflows must never run concurrently with
+# each other either, not just with themselves.
 concurrency:
-  group: production-review
+  group: main-agent-reconciliation
   cancel-in-progress: false
 
 jobs:

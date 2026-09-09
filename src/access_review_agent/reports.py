@@ -281,6 +281,62 @@ def build_per_system_report(
     return "\n".join(lines)
 
 
+def build_monthly_report(
+    system_name: str,
+    period: str,
+    issues: list[IssueInfo],
+    generated_at: str,
+    asset_owner_name: str = "TBD",
+) -> str:
+    """Monthly Operational Flags (SPEC.md §6, Milestone 10): every
+    currently-open Finding for `system_name`, any category including
+    Orphaned — informational only, no sign-off, no SLA, doesn't gate
+    Escalation regardless of how often detection runs (ADR-0003).
+    `issues` should already be filtered to this system and open state
+    (the caller does that once, not per row).
+    """
+    system_display = SYSTEM_DISPLAY[system_name]
+    lines = [
+        f"# Monthly Operational Flags — {system_display} — {period}",
+        "",
+        f"**Report generated:** {generated_at}",
+        f"**Asset Owner:** {asset_owner_name}",
+        f"**Committed to:** `reports/monthly/{period}/{system_name}.md`",
+        "",
+        "An informational nudge, not a compliance deadline. Lists every currently open "
+        f"Finding for {system_display}, any category — including Orphaned. Orphaned doesn't "
+        "need this report to surface it (it already gets its own same-day notice, and may "
+        "already have escalated), but if one is still open, it belongs in the complete "
+        "picture here too.",
+        "",
+        "This report runs a full reconciliation check every month, the same detection logic "
+        "as any other run — so even a system with no recent commits still gets a fresh look. "
+        "That does not change how a Finding it catches is classified: it's still "
+        "Evidentiary/quarterly, with no SLA of its own, and this report does not gate "
+        "Escalation or change its category's escalation eligibility.",
+        "",
+        "## Open items",
+        "",
+        "| Category | Identity | Access detail | Expected per policy | Open since | Issue |",
+        "| :-- | :-- | :-- | :-- | :-- | :-- |",
+    ]
+    if not issues:
+        lines.append("| No open items | | | | | |")
+    else:
+        for issue in issues:
+            category = category_of(issue)
+            fields = parse_issue_body(issue.body)
+            lines.append(
+                f"| {CATEGORY_DISPLAY.get(category, category)} | "
+                f"{_escape_table_cell(parse_issue_title(issue.title))} | "
+                f"{_escape_table_cell(fields.get('access_detail', 'N/A'))} | "
+                f"{_escape_table_cell(fields.get('expected_per_policy', 'N/A'))} | "
+                f"{issue.created_at[:10]} | [#{issue.number}]({issue.html_url}) |"
+            )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def build_aggregate_report(
     period: str,
     per_system_issues: dict[str, list[IssueInfo]],
