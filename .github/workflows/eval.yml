@@ -37,13 +37,10 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      # Milestone 1-5 scope so far: plain Python detection (ADR-0006) plus
-      # open_issue's dry-run adapter (ADR-0007) - no ANTHROPIC_API_KEY and
-      # no GITHUB_TOKEN needed here, since dry-run mode is the default and
-      # makes no network call. That changes at Milestone 6, when Identity
-      # resolution brings the first real model call and its real per-run
-      # cost - revisit this workflow then, don't add the secret back until
-      # it's actually needed. These steps will collapse into a general
+      # Milestones 1-5: plain Python detection (ADR-0006) plus open_issue's
+      # dry-run adapter (ADR-0007) - no ANTHROPIC_API_KEY and no
+      # GITHUB_TOKEN needed here, since dry-run mode is the default and
+      # makes no network call. These steps will collapse into a general
       # runner discovering all of evals/cases/ as later milestones add
       # more categories - see development-plan.md.
       - name: Run Milestone 1 eval suite
@@ -60,3 +57,13 @@ jobs:
 
       - name: Run Milestone 5 eval suite
         run: uv run python scripts/run_milestone5.py
+
+      # Milestone 6 (Identity resolution) is deliberately NOT run here.
+      # It's the first category needing a real Agent SDK call, so unlike
+      # everything above, every run of scripts/run_milestone6.py costs
+      # real money (~$0.10 for its 7 cases). Wiring it in would mean every
+      # future PR touching these paths spends automatically, with no
+      # human deciding to spend it that time - a different cost posture
+      # than the rest of this suite, and one deliberately not taken on by
+      # default. Run it locally/on-demand instead - see development-plan.md's
+      # Milestone 6.

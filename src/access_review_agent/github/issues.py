@@ -23,6 +23,7 @@ CATEGORY_TITLES = {
     "dormant-ad-hoc": "Dormant ad-hoc access",
     "unapproved": "Unapproved access",
     "drift": "Drift",
+    "identity-resolution": "Identity resolution",
 }
 
 SYSTEM_DISPLAY_NAMES = {
@@ -86,6 +87,14 @@ def _format_body(finding: dict[str, Any], repo_full_name: str, commit_sha: str |
             lines.append(
                 f"**Role change ({_as_literal(change['date'])}):** "
                 f"{_as_literal(change['old_role'])} → {_as_literal(change['new_role'])}"
+            )
+    elif category == "identity-resolution":
+        lines.append(f"**Resolution outcome:** {_as_literal(finding['resolution_outcome'])}")
+        lines.append(f"**Evidence:** {_as_literal(finding['evidence'])}")
+        if finding.get("claimed_owner_employee_id"):
+            lines.append(
+                f"**Claimed owner (now terminated):** "
+                f"{_as_literal(finding['claimed_owner_employee_id'])}"
             )
 
     if commit_sha:
