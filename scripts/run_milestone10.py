@@ -12,6 +12,7 @@ itself was verified manually against the real scratch repo before this
 suite was written - see development-plan.md.
 """
 
+import asyncio
 import sys
 from pathlib import Path
 
@@ -21,10 +22,10 @@ FIXTURE_DIR = Path(__file__).resolve().parent.parent / "evals" / "cases" / "mont
 SCRATCH_REPO = "dotMR/access-review-agent-scratch"
 
 
-def case_32_quiet_system_catch() -> bool:
+async def case_32_quiet_system_catch() -> bool:
     from access_review_agent.orchestrator import run_full_reconciliation
 
-    results = run_full_reconciliation(FIXTURE_DIR, SCRATCH_REPO, systems=None, check_lifecycle=False)
+    results = await run_full_reconciliation(FIXTURE_DIR, SCRATCH_REPO, systems=None, check_lifecycle=False)
     systems = results["systems"]
 
     problems = []
@@ -103,12 +104,12 @@ def case_33_monthly_report_scope() -> bool:
     return not problems
 
 
-def main() -> None:
-    results = [case_32_quiet_system_catch(), case_33_monthly_report_scope()]
+async def main() -> None:
+    results = [await case_32_quiet_system_catch(), case_33_monthly_report_scope()]
     total, passed = len(results), sum(results)
     print(f"\n{passed}/{total} cases passed")
     sys.exit(0 if passed == total else 1)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

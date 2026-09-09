@@ -12,6 +12,7 @@ data is untouched this run" (eval-cases.md's own wording for case 25) is
 structural, not just an assertion about the returned results.
 """
 
+import asyncio
 import json
 import shutil
 import sys
@@ -28,7 +29,7 @@ def findings_set(findings: list[dict]) -> set[tuple]:
     return {(f["category"], f["system_name"], f["employee_id"]) for f in findings}
 
 
-def case_25_single_system_scope() -> bool:
+async def case_25_single_system_scope() -> bool:
     from access_review_agent.dispatch import determine_dispatch
     from access_review_agent.orchestrator import run_full_reconciliation
 
@@ -45,7 +46,7 @@ def case_25_single_system_scope() -> bool:
 
         try:
             # check_lifecycle=False - see the identical note in run_milestone4.py
-            results = run_full_reconciliation(
+            results = await run_full_reconciliation(
                 aws_only_dir, SCRATCH_REPO, systems=dispatch, check_lifecycle=False
             )
         except Exception as e:
@@ -76,7 +77,7 @@ def case_25_single_system_scope() -> bool:
     return True
 
 
-def _all_systems_fan_out(case_name: str, changed_files: list[str]) -> bool:
+async def _all_systems_fan_out(case_name: str, changed_files: list[str]) -> bool:
     from access_review_agent.dispatch import determine_dispatch
     from access_review_agent.orchestrator import run_full_reconciliation
     from access_review_agent.units import SYSTEMS
@@ -90,7 +91,7 @@ def _all_systems_fan_out(case_name: str, changed_files: list[str]) -> bool:
     expected_set = findings_set(expected["findings"])
 
     # check_lifecycle=False - see the identical note in run_milestone4.py
-    results = run_full_reconciliation(FIXTURE_DIR, SCRATCH_REPO, systems=dispatch, check_lifecycle=False)
+    results = await run_full_reconciliation(FIXTURE_DIR, SCRATCH_REPO, systems=dispatch, check_lifecycle=False)
     opened = {
         (
             next(l for l in r.labels if l != system_name),
@@ -108,13 +109,13 @@ def _all_systems_fan_out(case_name: str, changed_files: list[str]) -> bool:
     return True
 
 
-def case_26_hris_fan_out() -> bool:
-    return _all_systems_fan_out("case-26-hris-fan-out", ["data/system_hr.csv"])
+async def case_26_hris_fan_out() -> bool:
+    return await _all_systems_fan_out("case-26-hris-fan-out", ["data/system_hr.csv"])
 
 
-def case_27_policy_fan_out() -> bool:
-    ok1 = _all_systems_fan_out("case-27-policy-fan-out (policy-config.yaml)", ["policy-config.yaml"])
-    ok2 = _all_systems_fan_out(
+async def case_27_policy_fan_out() -> bool:
+    ok1 = await _all_systems_fan_out("case-27-policy-fan-out (policy-config.yaml)", ["policy-config.yaml"])
+    ok2 = await _all_systems_fan_out(
         "case-27-policy-fan-out (role-access-mapping.yaml)", ["role-access-mapping.yaml"]
     )
     return ok1 and ok2
@@ -129,11 +130,11 @@ def case_28_no_trigger() -> bool:
     return dispatch == set()
 
 
-def main() -> None:
+async def main() -> None:
     results = [
-        case_25_single_system_scope(),
-        case_26_hris_fan_out(),
-        case_27_policy_fan_out(),
+        await case_25_single_system_scope(),
+        await case_26_hris_fan_out(),
+        await case_27_policy_fan_out(),
         case_28_no_trigger(),
     ]
     total, passed = len(results), sum(results)
@@ -142,4 +143,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

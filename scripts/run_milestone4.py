@@ -21,6 +21,7 @@ systems/ (one finding per system, five different categories):
    grounded finding, matching expected.json exactly.
 """
 
+import asyncio
 import json
 import shutil
 import sys
@@ -112,7 +113,7 @@ def run_cross_contamination_check() -> bool:
     return all_ok
 
 
-def run_orchestrator_check() -> bool:
+async def run_orchestrator_check() -> bool:
     from access_review_agent.orchestrator import run_full_reconciliation
 
     expected = json.loads((FIXTURE_DIR / "expected.json").read_text())
@@ -123,7 +124,7 @@ def run_orchestrator_check() -> bool:
     # scripts/run_milestone9.py already covers those, credential-free).
     # list_issues is a real read that needs a valid token even against a
     # private repo - CI runs this suite with none, by design.
-    results = run_full_reconciliation(
+    results = await run_full_reconciliation(
         FIXTURE_DIR, "dotMR/access-review-agent-scratch", check_lifecycle=False
     )
 
@@ -151,11 +152,11 @@ def run_orchestrator_check() -> bool:
     return not problems
 
 
-def main() -> None:
+async def main() -> None:
     results = [
         run_isolation_check(),
         run_cross_contamination_check(),
-        run_orchestrator_check(),
+        await run_orchestrator_check(),
     ]
     total, passed = len(results), sum(results)
     print(f"\n{passed}/{total} checks passed")
@@ -163,4 +164,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
