@@ -100,11 +100,20 @@ async def run_full_reconciliation(
     surface isn't just bad data - anything uncaught is a genuine bug and
     should still crash loudly.
 
+    The write path gets the same isolation, at finding granularity: a
+    real GitHub failure (rate limit, network, 5xx, auth) opening one
+    Issue is caught and recorded in "write_failed" rather than aborting
+    the rest of that system's findings - previously only GroundingError
+    was caught here, so a transient API blip had a bigger blast radius
+    than a malformed input file did. lifecycle.py's own write loops
+    (close_accepted_risk_issues, escalate_overdue_issues,
+    close_remediated_issues) isolate the same way, per Issue.
+
     Returns {"systems": {<system_name>: {detected, opened, rejected,
-    skipped_existing, remediated_closed, failed}}, "lifecycle":
-    {accepted_risk_closed, escalated} | None} - kept as two separate
-    shapes so a caller can't conflate a per-system result with the
-    cross-system lifecycle one.
+    skipped_existing, remediated_closed, write_failed, failed}},
+    "lifecycle": {accepted_risk_closed, escalated} | None} - kept as two
+    separate shapes so a caller can't conflate a per-system result with
+    the cross-system lifecycle one.
     """
     all_issues = list_issues(repo_full_name) if check_lifecycle else None
     skip_reopen_keys = None
@@ -137,6 +146,7 @@ async def run_full_reconciliation(
                 "rejected": [],
                 "skipped_existing": [],
                 "remediated_closed": [],
+                "write_failed": [],
                 "failed": str(e),
             }
             continue
@@ -154,6 +164,7 @@ async def run_full_reconciliation(
                 "rejected": [],
                 "skipped_existing": [],
                 "remediated_closed": [],
+                "write_failed": [],
                 "failed": f"Identity resolution failed: {e}",
             }
             continue
@@ -161,6 +172,7 @@ async def run_full_reconciliation(
         opened: list[IssueResult] = []
         rejected: list[dict[str, Any]] = []
         skipped_existing: list[dict[str, Any]] = []
+        write_failed: list[dict[str, Any]] = []
         for finding in findings:
             try:
                 result = open_issue(
@@ -169,6 +181,17 @@ async def run_full_reconciliation(
                 )
             except GroundingError as e:
                 rejected.append({"finding": finding, "reason": str(e)})
+                continue
+            except Exception as e:
+                # A real GitHub write failure (rate limit, network, 5xx,
+                # auth) - isolated to this ONE finding, not the whole
+                # system's run. Same fail-loud-completeness discipline
+                # already applied to bad source data and identity-
+                # resolution failures above: a transient API error while
+                # writing shouldn't have a bigger blast radius than a
+                # malformed input file does.
+                print(f"::error::{system_name} failed to open Issue for a finding: {e}")
+                write_failed.append({"finding": finding, "reason": str(e)})
                 continue
             if result is None:
                 skipped_existing.append(finding)
@@ -187,6 +210,7 @@ async def run_full_reconciliation(
             "rejected": rejected,
             "skipped_existing": skipped_existing,
             "remediated_closed": remediated_closed,
+            "write_failed": write_failed,
             "failed": None,
         }
 
@@ -241,6 +265,8 @@ async def generate_monthly_reports(
             # and visible, but the monthly report for every OTHER system
             # still gets built and committed below regardless.
             print(f"::error::{system_name} FAILED: {summary['failed']}")
+        for failure in summary["write_failed"]:
+            print(f"::error::{system_name} failed to open Issue for a finding: {failure['reason']}")
 
     all_issues = list_issues(repo_full_name)
     generated_at = datetime.now(timezone.utc).isoformat()

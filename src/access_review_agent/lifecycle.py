@@ -15,6 +15,12 @@ needs to know whether a finding is STILL true, which only this run's own
 fresh detection for that one system can answer - unlike the other two,
 it's necessarily scoped to one system per call, using that system's own
 just-computed findings, not list_issues alone.
+
+Every write in this file is isolated per Issue: a real GitHub failure
+(rate limit, network, 5xx, auth) acting on one Issue is caught and
+logged loudly rather than aborting the rest of the batch - previously
+nothing here caught anything, so one bad write killed every other
+Issue's lifecycle check in the same run too.
 """
 
 from datetime import date
@@ -37,7 +43,11 @@ def close_accepted_risk_issues(
     closed = []
     for issue in issues:
         if issue.state == "open" and "accepted-risk" in issue.labels:
-            adapter.close_issue(repo_full_name, issue.number)
+            try:
+                adapter.close_issue(repo_full_name, issue.number)
+            except Exception as e:
+                print(f"::error::Failed to close accepted-risk Issue #{issue.number}: {e}")
+                continue
             closed.append(issue.number)
     return closed
 
@@ -75,14 +85,21 @@ def escalate_overdue_issues(
         if days_open <= sla_days:
             continue
 
-        adapter.apply_label(repo_full_name, issue.number, "escalated")
-        adapter.add_comment(
-            repo_full_name,
-            issue.number,
-            f"**Escalated:** the same-day SLA for {CATEGORY_DISPLAY[category]} was missed "
-            f"(opened {created.isoformat()}, still open {days_open} day(s) later) — per "
-            "access-control-policy.md's Unremediated findings Principle.",
-        )
+        try:
+            adapter.apply_label(repo_full_name, issue.number, "escalated")
+            adapter.add_comment(
+                repo_full_name,
+                issue.number,
+                f"**Escalated:** the same-day SLA for {CATEGORY_DISPLAY[category]} was missed "
+                f"(opened {created.isoformat()}, still open {days_open} day(s) later) — per "
+                "access-control-policy.md's Unremediated findings Principle.",
+            )
+        except Exception as e:
+            # Both calls are treated as one unit - a failure between the
+            # label and the comment isn't a state worth continuing from,
+            # loud and skipped, same as a failure before either started.
+            print(f"::error::Failed to escalate Issue #{issue.number}: {e}")
+            continue
         escalated.append(issue.number)
     return escalated
 
@@ -129,12 +146,16 @@ def close_remediated_issues(
         if (category, system_name, employee_id) in current_keys:
             continue  # still an open finding this run - not remediated
 
-        adapter.close_issue(repo_full_name, issue.number)
-        adapter.add_comment(
-            repo_full_name,
-            issue.number,
-            f"**Remediated:** {CATEGORY_DISPLAY[category]} is no longer present as of this "
-            "run's detection pass — closing automatically.",
-        )
+        try:
+            adapter.close_issue(repo_full_name, issue.number)
+            adapter.add_comment(
+                repo_full_name,
+                issue.number,
+                f"**Remediated:** {CATEGORY_DISPLAY[category]} is no longer present as of this "
+                "run's detection pass — closing automatically.",
+            )
+        except Exception as e:
+            print(f"::error::Failed to close remediated Issue #{issue.number}: {e}")
+            continue
         closed.append(issue.number)
     return closed
