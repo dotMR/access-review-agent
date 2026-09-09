@@ -3,7 +3,7 @@
 **Report generated:** {{GENERATED_TIMESTAMP}}
 **Data snapshot:** {{DATA_SNAPSHOT_REF}}
 **Model:** {{MODEL_NAME_AND_VERSION}}
-**Reporting period:** {{PERIOD_START}} – {{PERIOD_END}}
+**Reporting period:** {{PERIOD}}
 **Asset Owner:** {{ASSET_OWNER_NAME}}
 **Committed to:** `reports/{{PERIOD}}/{{SYSTEM_NAME}}.md`
 
