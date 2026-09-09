@@ -77,7 +77,7 @@ Full detail: ADR-0001. Summary:
 | `read_hris` | All subagents, main agent | Same read-and-validate pattern |
 | `read_policy` | All subagents, main agent | Reads `role-access-mapping.yaml` / `policy-config.yaml` |
 | `read_prior_report` | Main agent only | Local file read of a past quarterly report from the repo checkout — trend line, quarterly-recurrence check |
-| `list_issues` | Main agent only | Live GitHub read, filtered by label/category/state — "is this still open right now" (re-check/auto-close, Orphaned SLA) |
+| `list_issues` | Main agent only | Live GitHub read, optionally filtered by label (its only real parameter — every Issue's state is always fetched, `state="all"`); category/state filtering happens in caller code (`orchestrator.py`, `lifecycle.py`), not the tool itself — "is this still open right now" (re-check/auto-close, Orphaned SLA) |
 | `open_issue` / `close_issue` / `apply_label` / `add_comment` | Main agent only | Direct GitHub API calls, not an MCP server. `open_issue`'s title/body/label format is specified in §4, Issue format |
 | `commit_report` | Main agent only | Writes a report file to `reports/` and commits it directly — no PR, no review gate. Used for per-system reports, the aggregate report, and Monthly Operational Flags (§6) |
 | `create_release` | Main agent only | Tags the commit `commit_report` just wrote the quarterly reports in (tag = `<period>`, e.g. `2026-Q1` — same canonical value as the `reports/` folder and every template's `{{PERIOD}}`), sets a human-readable title, writes a body summarizing the aggregate report's Executive Summary numbers with links, and uploads the six report Markdown files plus the aggregate's PDF as assets (§6) |

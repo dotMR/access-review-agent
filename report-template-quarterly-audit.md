@@ -3,7 +3,7 @@
 **Report generated:** {{GENERATED_TIMESTAMP}}
 **Data snapshot:** {{DATA_SNAPSHOT_REF}}
 **Model:** {{MODEL_NAME_AND_VERSION}}
-**Reporting period:** {{PERIOD_START}} – {{PERIOD_END}}
+**Reporting period:** {{PERIOD}}
 **Systems in scope:** AWS, GitHub, Salesforce, Finance ERP, VPN
 **ISO 27001:2022 controls addressed:** A.5.15 (Access control), A.5.16 (Identity management), A.5.18 (Access rights), A.8.2 (Privileged access rights)
 **SOC 2 Common Criteria addressed:** CC6.1 (Logical access controls), CC6.2 (Access provisioning and de-provisioning), CC6.3 (Role-based access, least privilege, and segregation of duties)
