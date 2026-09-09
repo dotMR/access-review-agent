@@ -44,9 +44,21 @@ jobs:
 
       - name: Determine period
         id: period
+        # inputs.period is untrusted, free-form text - passed through an
+        # env var rather than spliced directly into the shell script (the
+        # classic GitHub Actions script-injection pattern: a `${{ }}`
+        # value interpolated straight into `run:` becomes shell content,
+        # not just a string). $INPUT_PERIOD is a literal env var value,
+        # never re-parsed as shell.
+        env:
+          INPUT_PERIOD: ${{ inputs.period }}
         run: |
-          if [ -n "${{ inputs.period }}" ]; then
-            echo "period=${{ inputs.period }}" >> "$GITHUB_OUTPUT"
+          if [ -n "$INPUT_PERIOD" ]; then
+            if ! [[ "$INPUT_PERIOD" =~ ^[0-9]{4}-Q[1-4]$ ]]; then
+              echo "::error::period must match YYYY-Qn (e.g. 2026-Q1), got: $INPUT_PERIOD"
+              exit 1
+            fi
+            echo "period=$INPUT_PERIOD" >> "$GITHUB_OUTPUT"
           else
             python3 -c "
           from datetime import date

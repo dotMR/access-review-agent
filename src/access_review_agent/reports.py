@@ -129,15 +129,34 @@ def _counts_table(issues: list[IssueInfo], rows: list[tuple[str, str]]) -> list[
     return lines
 
 
+def _escape_table_cell(value: str) -> str:
+    """Escape a value parsed from an Issue's title/body for safe embedding
+    in a Markdown table cell. Issues are editable by anyone with write
+    access to this repo's Issues, not just the agent that originally
+    opened them - the same untrusted-content risk github/issues.py's
+    _as_literal() defends against when *writing* an Issue body applies
+    here too when *reading* one back into a report. A literal `|`
+    would also break the table's column structure regardless of mention/
+    reference risk, so it's escaped unconditionally, not just wrapped.
+    """
+    value = value.replace("|", "\\|")
+    # Single-pass substitution, not chained .replace() calls: both
+    # replacement strings ("&#64;", "&#35;") themselves contain "#", so
+    # a second .replace("#", ...) pass would corrupt the first
+    # substitution's own output. re.sub with a callback only matches
+    # against the original text, never re-scans what it just inserted.
+    return re.sub(r"[@#]", lambda m: {"@": "&#64;", "#": "&#35;"}[m.group()], value)
+
+
 def _finding_rows(issues: list[IssueInfo], category: str) -> list[dict[str, Any]]:
     rows = []
     for issue in issues:
         if _category_of(issue) != category:
             continue
-        fields = parse_issue_body(issue.body)
+        fields = {k: _escape_table_cell(v) for k, v in parse_issue_body(issue.body).items()}
         rows.append(
             {
-                "identity": parse_issue_title(issue.title),
+                "identity": _escape_table_cell(parse_issue_title(issue.title)),
                 "status": _status(issue),
                 "issue_number": issue.number,
                 "issue_url": issue.html_url,

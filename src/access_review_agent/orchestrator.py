@@ -14,6 +14,7 @@ can scope to exactly what `dispatch.determine_dispatch()` decided — a
 single-system commit runs one unit, not all five.
 """
 
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -60,6 +61,9 @@ def run_full_reconciliation(
     return results
 
 
+_PERIOD_RE = re.compile(r"^\d{4}-Q[1-4]$")
+
+
 def generate_quarterly_reports(repo_full_name: str, period: str) -> dict[str, ReportCommitResult]:
     """Roll up the quarter's already-existing Issue-tracker state (SPEC.md
     §2 — detection already happened via push-triggered runs throughout
@@ -67,7 +71,16 @@ def generate_quarterly_reports(repo_full_name: str, period: str) -> dict[str, Re
     the two evidentiary reports per system plus the aggregate, committing
     all six via commit_report — the sole caller of commit_report, same
     "main agent only" pattern as open_issue.
+
+    `period` becomes part of every committed file's path
+    (`reports/{period}/...`) - validated strictly (YYYY-Qn) before it
+    ever reaches a path, since workflow_dispatch's `period` input is
+    free-form text a caller controls, not something safe to trust as a
+    path segment unvalidated (path traversal via `../`, or worse).
     """
+    if not _PERIOD_RE.match(period):
+        raise ValueError(f"period must match YYYY-Qn (e.g. 2026-Q1), got: {period!r}")
+
     all_issues = list_issues(repo_full_name)
     per_system_issues = {
         system_name: [i for i in all_issues if SYSTEM_LABEL[system_name] in i.labels]
