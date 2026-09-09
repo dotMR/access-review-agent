@@ -95,29 +95,25 @@ def close_remediated_issues(
     open_issues: list[IssueInfo],
 ) -> list[int]:
     """Close every open Issue for `system_name` whose finding is no longer
-    present in `current_findings` - iam-review-agent-design.md's "Closing
-    the loop" section, SPEC.md §8's "remediation re-check/auto-close":
-    "each run compares currently-open findings/Issues against the current
-    data; anything no longer present...gets its Issue closed with a note,
-    not left dangling." A real, previously-missing capability - found live
-    during Milestone 12's scratch-repo trial (an Orphaned Issue stayed
-    open after the underlying access was genuinely revoked in the data),
-    not designed in speculatively; SPEC.md §8 already listed this as v1
-    Core scope, Milestone 9 built Escalation and Accepted Risk but never
-    this third lifecycle mechanic.
+    present in `current_findings` - SPEC.md §8's "remediation re-check/
+    auto-close," iam-review-agent-design.md's "Closing the loop": each
+    run compares currently-open findings against current data; anything
+    no longer present gets its Issue closed, not left dangling. A real,
+    previously-missing capability, caught live during Milestone 12's
+    scratch-repo trial (an Orphaned Issue stayed open after its access
+    was genuinely revoked in the data) - Milestone 9 built Escalation
+    and Accepted Risk but never this third lifecycle mechanic.
 
-    Deliberately scoped to one system per call, using that system's own
-    just-computed `current_findings` - unlike close_accepted_risk_issues/
-    escalate_overdue_issues above, this needs to know whether a finding
-    is STILL true, which only fresh detection for that one system can
-    answer, not Issue metadata alone. Call once per system inside the
-    same per-system loop that already computed `current_findings`, not
-    unconditionally across every system regardless of push scope.
+    Scoped to one system per call, using that system's own just-computed
+    `current_findings` - unlike the two functions above, which only need
+    Issue metadata, this needs to know whether a finding is STILL true,
+    which only fresh per-system detection can answer. Call once per
+    system inside the loop that computed `current_findings`, not
+    unconditionally across every system.
 
-    Skips any Issue carrying the accepted-risk label unconditionally -
-    that's close_accepted_risk_issues' exclusive path (a human decision,
-    not a re-detection outcome); closing it here too, with a "remediated"
-    comment, would misrepresent why it's actually closed.
+    Skips any Issue carrying accepted-risk unconditionally - that's
+    close_accepted_risk_issues' exclusive path (a human decision, not a
+    re-detection outcome); closing it here too would misrepresent why.
     """
     current_keys = {
         (f["category"], f["system_name"], f["source_record"]["employee_id"]) for f in current_findings
