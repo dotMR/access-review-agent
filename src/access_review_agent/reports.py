@@ -92,16 +92,12 @@ def system_of(issue: IssueInfo) -> str | None:
     labels via the fixed SYSTEM_LABEL mapping - NOT "whichever label
     isn't the category". github/issues.py's _format_labels writes
     exactly [category, system] at creation time, but an Issue can carry
-    MORE labels than that once lifecycle actions apply accepted-risk or
+    more labels than that once lifecycle actions apply accepted-risk or
     escalated later (Milestone 9) - "whichever label isn't the category"
-    is ambiguous the moment a third label exists, and a naive first-match
-    could pick accepted-risk/escalated as if it were the system. Found
-    live during Milestone 12's scratch-repo trial: an accepted-risk-
-    labeled Issue's system_of() returned "accepted-risk" instead of
-    "vpn", producing a wrong duplicate-Issue-prevention key and letting a
-    second Issue for the same finding open right alongside the original.
-    Matching against the fixed, known set of system labels is
-    unambiguous regardless of how many other labels an Issue carries.
+    is ambiguous the moment a third label exists, and could pick
+    accepted-risk/escalated as if it were the system (a real bug this
+    once was). Matching against the fixed, known set of system labels is
+    unambiguous no matter how many other labels an Issue carries.
     """
     return next((_SYSTEM_LABEL_TO_NAME[label] for label in issue.labels if label in _SYSTEM_LABEL_TO_NAME), None)
 
@@ -186,51 +182,38 @@ def _counts_table(issues: list[IssueInfo], rows: list[tuple[str, str]]) -> list[
 
 _ESCAPE_PATTERN = re.compile(r"(&|<|>|\||@|#|!\[)")
 _ESCAPE_REPLACEMENTS = {
-    # HTML-escape first, most important: markdown.markdown() (used by
-    # pdf_export.py's Markdown -> HTML -> PDF pipeline, Milestone 11)
-    # passes raw HTML through UNCHANGED by default - a literal
-    # <img src="http://internal-service/..."> or <script> tag typed
-    # directly into an Issue title/body would otherwise flow straight
-    # through into the rendered PDF. Confirmed exploitable with a local
-    # test HTTP server before this fix: xhtml2pdf genuinely issues the
-    # request, including any attacker-chosen query string, and does so
-    # even when its link_callback is set to refuse every resource - its
-    # image-fetching path bypasses that callback entirely, so escaping
-    # the source content is the only reliable defense, not a fetch-time
-    # allowlist.
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
-    # A literal `|` would also break the table's column structure
-    # regardless of mention/reference/SSRF risk, so it's escaped
-    # unconditionally, not just wrapped.
-    "|": "\\|",
+    "|": "\\|",  # also breaks the table's column structure if left raw
     "@": "&#64;",
     "#": "&#35;",
-    # Markdown's own image-trigger sequence - HTML-escaping <, > alone
-    # doesn't stop this, since ![...](...) uses neither character. Only
-    # the two-char "![" trigger needs breaking; a bare "[" (plain link,
-    # no fetch) is left alone.
-    "![": "!&#91;",
+    "![": "!&#91;",  # Markdown's own image-trigger sequence; a bare "[" is left alone
 }
 
 
 def _escape_table_cell(value: str) -> str:
-    """Escape a value parsed from an Issue's title/body (or produced by
-    an LLM, e.g. Risk Assessment narrative text) for safe embedding in a
-    Markdown table cell that may later be rendered to both an Issue-
-    tracker-adjacent report AND a PDF (Milestone 11). Issues are editable
-    by anyone with write access to this repo's Issues, not just the
-    agent that originally opened them - the same untrusted-content risk
-    github/issues.py's _as_literal() defends against when *writing* an
-    Issue body applies here too when *reading* one back into a report.
+    """Escape a value parsed from an Issue's title/body (or an LLM's Risk
+    Assessment narrative) for safe embedding in a Markdown table cell
+    that may render to both a report and a PDF (Milestone 11). Issues
+    are editable by anyone with repo write access, not just the agent
+    that opened them - same untrusted-content risk github/issues.py's
+    _as_literal() defends against on write, here on read.
 
-    Single-pass regex substitution, not chained .replace() calls: several
-    of the replacement strings ("&amp;", "&#64;", "&#35;", "!&#91;")
-    themselves contain characters this function also escapes, so a
-    second sequential .replace() pass would corrupt the first
-    substitution's own output. re.sub with a callback only matches
-    against the original text, never re-scans what it just inserted.
+    HTML-escaping &/</> is the load-bearing part: markdown.markdown()
+    (pdf_export.py's Markdown -> HTML -> PDF pipeline) passes raw HTML
+    through unchanged by default, and a confirmed-exploitable SSRF via
+    xhtml2pdf's image fetch was found and fixed here - a crafted
+    <img src="...">/![...]( ) survives an unescaped table cell straight
+    into the rendered PDF, and xhtml2pdf's link_callback resource hook
+    does NOT block it (its image-fetch path bypasses that callback
+    entirely), so escaping the source is the only real defense.
+
+    Single-pass regex, not chained .replace() calls: several replacement
+    strings ("&amp;", "&#64;", "!&#91;") contain characters this
+    function also escapes, so a second .replace() pass would corrupt the
+    first substitution's output. re.sub with a callback only matches the
+    original text, never re-scans what it just inserted.
     """
     return _ESCAPE_PATTERN.sub(lambda m: _ESCAPE_REPLACEMENTS[m.group()], value)
 
