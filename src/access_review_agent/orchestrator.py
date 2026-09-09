@@ -82,7 +82,8 @@ async def run_full_reconciliation(
     Escalation's same-day SLA shouldn't depend on which system got a
     commit today); duplicate-Issue prevention (passed to open_issue as
     `skip_reopen_keys` - see its own docstring for the key and why);
-    and Remediation re-check (SPEC.md §8, "Closing the loop" -
+    and Remediation re-check (SPEC.md §8's "remediation re-check/
+    auto-close," iam-review-agent-design.md's "Closing the loop" -
     close_remediated_issues, called once per system with that system's
     own just-detected `findings`, since only fresh per-system detection
     can know whether a finding is still true - unlike the other two
@@ -271,10 +272,10 @@ def _build_release_payload(
     period: str, report_contents: dict[str, str], all_issues: list
 ) -> tuple[str, str, dict[str, bytes]]:
     """(title, body, assets) for the quarterly Release (SPEC.md §6) -
-    shared by generate_quarterly_reports (single-shot, no gate - manual/
-    testing use) and create_quarterly_release (the real two-job,
-    human-in-the-loop path, Milestone 11), so the two can't drift apart.
-    `report_contents` must have all five system names plus "aggregate".
+    used by create_quarterly_release, kept as its own function so the
+    payload-building logic stays separate from that function's own
+    file-reading/tagging concerns. `report_contents` must have all five
+    system names plus "aggregate".
     """
     year, quarter = period.split("-Q")
     counts = summary_counts(all_issues)
@@ -303,11 +304,10 @@ def create_quarterly_release(repo_full_name: str, period: str, checkout_dir: Pat
     redundant set of commit_report calls that would otherwise create
     duplicate no-op commits.
 
-    Tags whatever commit `checkout_dir` is currently at - the caller
-    (scripts/create_quarterly_release.py) resolves that via `git
-    rev-parse HEAD` after its own checkout, since the workflow-trigger-
-    time `github.sha` context value predates the report-generation job's
-    commits and would tag the wrong commit.
+    Tags whatever commit `checkout_dir` is currently at, resolved here
+    via `git rev-parse HEAD` against that checkout, since the workflow-
+    trigger-time `github.sha` context value predates the report-
+    generation job's commits and would tag the wrong commit.
     """
     if not _PERIOD_RE.match(period):
         raise ValueError(f"period must match YYYY-Qn (e.g. 2026-Q1), got: {period!r}")
@@ -339,8 +339,9 @@ async def generate_quarterly_reports(
     §2 — detection already happened via push-triggered runs throughout
     the quarter; this just reads and renders, no fresh detection) into
     the two evidentiary reports per system plus the aggregate, committing
-    all six via commit_report — the sole caller of commit_report, same
-    "main agent only" pattern as open_issue.
+    all six via commit_report - restricted to this module the same
+    "main agent only" way open_issue is (generate_monthly_reports is the
+    other caller, for the monthly report path).
 
     `period` becomes part of every committed file's path
     (`reports/{period}/...`) - validated strictly (YYYY-Qn) before it
