@@ -67,6 +67,9 @@ jobs:
       - name: Run Milestone 11 eval suite
         run: uv run python scripts/run_milestone11.py
 
+      - name: Verify demo-timeline seed data (Milestone 12)
+        run: uv run python scripts/verify_demo_timeline_seed.py
+
       # Milestones 6 (Identity resolution) and 8 (Risk Assessment
       # narrative + LLM-as-judge) are deliberately NOT run here. Both
       # need a real Agent SDK call, so unlike everything above, every run
