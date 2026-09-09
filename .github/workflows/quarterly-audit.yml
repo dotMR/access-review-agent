@@ -11,6 +11,13 @@ name: Quarterly Audit Report
 # GITHUB_WRITE_MODE stays unset here (dry-run, ADR-0007's default) - same
 # reasoning as production.yml: no live data yet, going live is a
 # deliberate later decision, not a side effect of wiring the trigger.
+#
+# generate_narrative is a separate, dedicated gate from GITHUB_WRITE_MODE
+# (Milestone 8): Risk Assessment narrative synthesis is a real Anthropic
+# API call made regardless of GitHub write mode, so it needs its own
+# explicit, deliberate opt-in - only available as a workflow_dispatch
+# input (a human checks it each time), never true on the schedule
+# trigger, which has no inputs to read from at all.
 on:
   workflow_dispatch:
     inputs:
@@ -18,6 +25,11 @@ on:
         description: "Reporting period, e.g. 2026-Q1"
         required: true
         type: string
+      generate_narrative:
+        description: "Generate Risk Assessment narratives (real Anthropic API cost)"
+        required: false
+        type: boolean
+        default: false
   schedule:
     # 00:00 UTC on the 1st of Jan/Apr/Jul/Oct, matching SPEC.md §2's
     # quarterly-audit cadence. Inert today (dry-run, no live data) - the
@@ -73,4 +85,8 @@ jobs:
       - name: Generate and commit reports
         env:
           PERIOD: ${{ steps.period.outputs.period }}
+          # inputs.generate_narrative is undefined (empty) on the schedule
+          # trigger, which run_quarterly_reports.py's "== true" check
+          # correctly treats as disabled - no separate branching needed.
+          ENABLE_RISK_ASSESSMENT_NARRATIVE: ${{ inputs.generate_narrative }}
         run: uv run python scripts/run_quarterly_reports.py
