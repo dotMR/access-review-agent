@@ -12,6 +12,7 @@ Milestone 5. REPO_FULL_NAME defaults to the repo this workflow runs in;
 overridden only for throwaway verification runs against the scratch repo.
 """
 
+import asyncio
 import os
 import sys
 from pathlib import Path
@@ -19,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 
-def main() -> None:
+async def main() -> None:
     from access_review_agent.dispatch import determine_dispatch
     from access_review_agent.orchestrator import run_full_reconciliation
 
@@ -43,7 +44,7 @@ def main() -> None:
     repo_full_name = os.environ.get("REPO_FULL_NAME") or os.environ["GITHUB_REPOSITORY"]
     commit_sha = os.environ.get("GITHUB_SHA")
 
-    results = run_full_reconciliation(data_dir, repo_full_name, systems=dispatch, commit_sha=commit_sha)
+    results = await run_full_reconciliation(data_dir, repo_full_name, systems=dispatch, commit_sha=commit_sha)
 
     any_failed = False
     for system_name, summary in results["systems"].items():
@@ -77,4 +78,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

@@ -47,8 +47,13 @@ class SystemDetectionUnit:
 
     def detect_all(self) -> list[dict[str, Any]]:
         """Run every Tier 1 (deterministic) category for this unit's own
-        system only — Identity resolution and Drift's Tier 2 reasoning
-        cousin aren't built until Milestone 6.
+        system only, synchronously - Identity resolution (Milestone 6,
+        the one v1 Core category needing a real Agent SDK call) is
+        deliberately NOT run here. It's added one level up, by
+        orchestrator.run_full_reconciliation (async), which is what lets
+        this unit and its detect_all() contract stay plain, synchronous
+        Python - ADR-0006's Tier 1/Tier 2 split point, drawn at the
+        orchestrator layer rather than inside every unit.
         """
         findings: list[dict[str, Any]] = []
         findings += detect_orphaned(self._data_dir, self._system_name)["findings"]

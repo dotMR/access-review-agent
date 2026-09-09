@@ -27,6 +27,7 @@ from access_review_agent.github.adapter import (
     get_adapter,
     list_issues,
 )
+from access_review_agent.detection.identity_resolution import detect_identity_resolution
 from access_review_agent.github.issues import open_issue
 from access_review_agent.grounding import GroundingError
 from access_review_agent.lifecycle import close_accepted_risk_issues, escalate_overdue_issues
@@ -46,18 +47,29 @@ from access_review_agent.tools.policy import DEFAULT_ROLE_ACCESS_MAPPING_PATH, r
 from access_review_agent.units import SYSTEMS, SystemDetectionUnit
 
 
-def run_full_reconciliation(
+async def run_full_reconciliation(
     data_dir: Path,
     repo_full_name: str,
     systems: set[str] | None = None,
     commit_sha: str | None = None,
     check_lifecycle: bool = True,
 ) -> dict[str, Any]:
-    """Reconciliation across `systems` (default: all five) and all Tier 1
-    categories: detect, then open an Issue for every grounded finding.
-    `commit_sha`, when given, upgrades every Issue's Source record
-    citation to a clickable GitHub blob permalink (Milestone 5) - passed
-    straight through to open_issue.
+    """Reconciliation across `systems` (default: all five), every Tier 1
+    (deterministic) category plus Identity resolution (Tier 2, Milestone 6
+    - the one category needing an Agent SDK call): detect, then open an
+    Issue for every grounded finding. `commit_sha`, when given, upgrades
+    every Issue's Source record citation to a clickable GitHub blob
+    permalink (Milestone 5) - passed straight through to open_issue.
+
+    Identity resolution runs per system, same as every Tier 1 category -
+    SystemDetectionUnit.detect_all() stays Tier-1-only and synchronous by
+    design (ADR-0006's split point), so this async function is what adds
+    Identity resolution's findings on top, not the unit itself. Cheap when
+    there's nothing to resolve: find_unresolved_candidates() is plain
+    Python and detect_identity_resolution() returns immediately with no
+    Agent SDK call at all if it finds zero candidates - the eval fixtures
+    every CI-wired milestone script runs against have none, so this
+    doesn't turn any of those free/local suites into a paid one.
 
     Also runs Escalation/Accepted-Risk lifecycle checks (Milestone 9,
     ADR-0005) over EVERY currently-open Issue, unconditionally - never
@@ -106,6 +118,28 @@ def run_full_reconciliation(
             }
             continue
 
+        try:
+            identity_result = await detect_identity_resolution(data_dir, system_name)
+            findings = findings + identity_result["findings"]
+        except Exception as e:
+            # Deliberately broader than the FileNotFoundError/ValueError
+            # catch above: Identity resolution's failure surface is a live
+            # Agent SDK call, not just local file parsing, so a transient
+            # network/API error is a realistic, non-"genuine bug" failure
+            # mode here in a way it isn't for Tier 1 - and it shouldn't
+            # crash the whole run any more than a malformed file does.
+            # Isolated at the same system granularity Milestone 11 already
+            # established, not partial-credited against the Tier 1
+            # findings just computed above - same all-or-nothing-per-
+            # system semantics as the block above, just a second cause.
+            systems_results[system_name] = {
+                "detected": 0,
+                "opened": [],
+                "rejected": [],
+                "failed": f"Identity resolution failed: {e}",
+            }
+            continue
+
         opened: list[IssueResult] = []
         rejected: list[dict[str, Any]] = []
         for finding in findings:
@@ -135,7 +169,7 @@ def run_full_reconciliation(
 _MONTH_PERIOD_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 
 
-def generate_monthly_reports(
+async def generate_monthly_reports(
     data_dir: Path, repo_full_name: str, period: str, commit_sha: str | None = None
 ) -> dict[str, ReportCommitResult]:
     """Monthly Operational Flags (SPEC.md §2/§6, ADR-0003, Milestone 10):
@@ -156,7 +190,7 @@ def generate_monthly_reports(
     if not _MONTH_PERIOD_RE.match(period):
         raise ValueError(f"period must match YYYY-MM (e.g. 2026-02), got: {period!r}")
 
-    reconciliation = run_full_reconciliation(data_dir, repo_full_name, systems=None, commit_sha=commit_sha)
+    reconciliation = await run_full_reconciliation(data_dir, repo_full_name, systems=None, commit_sha=commit_sha)
     for system_name, summary in reconciliation["systems"].items():
         if summary["failed"]:
             # Per-system failure isolation (SPEC.md §7, Milestone 11): loud
