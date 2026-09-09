@@ -507,7 +507,8 @@ def build_aggregate_report(
             f"[{SYSTEM_DISPLAY[s]}](./{s.replace('_', '-')}.md)" for s in SYSTEM_ORDER
         ),
         f"- Data snapshot: {data_snapshot_ref}",
-        "- PDF export: _not yet implemented (out of scope per SPEC.md §8's Deferred section)_",
+        "- PDF export: bundled as a Release asset (`aggregate.pdf`) alongside the tagged commit "
+        "- see the Releases page for this period, not this Markdown file's own directory.",
         "",
         "---",
         "<!-- Out of scope (not shown in this report): Dormant admin-level's, Dormant "
