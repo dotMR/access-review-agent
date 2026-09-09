@@ -35,6 +35,7 @@ def run_full_reconciliation(
     repo_full_name: str,
     systems: set[str] | None = None,
     commit_sha: str | None = None,
+    check_lifecycle: bool = True,
 ) -> dict[str, Any]:
     """Reconciliation across `systems` (default: all five) and all Tier 1
     categories: detect, then open an Issue for every grounded finding.
@@ -49,8 +50,18 @@ def run_full_reconciliation(
     cross-system bookkeeping is what the main agent (the sole holder of
     GitHub write tools) is for, not something detection units do.
 
+    `check_lifecycle=False` skips that pass entirely - list_issues is a
+    real read that needs a valid token even against a private repo
+    (unauthenticated reads 404, they don't just see less), unlike
+    open_issue's write side, which dry-run mode already makes network-
+    free. Milestones 1-5's eval suites run credential-free in CI by
+    design; they pass False here since Milestone 9's lifecycle logic
+    already has its own dedicated, credential-free test coverage
+    (scripts/run_milestone9.py) and doesn't need re-exercising through
+    every other milestone's detection tests too.
+
     Returns {"systems": {<system_name>: {detected, opened, rejected}},
-    "lifecycle": {accepted_risk_closed, escalated}} - two clearly
+    "lifecycle": {accepted_risk_closed, escalated} | None} - two clearly
     separate shapes under their own keys, not flattened together, so a
     caller iterating per-system results can't accidentally trip over the
     differently-shaped lifecycle entry.
@@ -74,12 +85,14 @@ def run_full_reconciliation(
             "rejected": rejected,
         }
 
-    adapter = get_adapter()
-    all_issues = list_issues(repo_full_name)
-    lifecycle_results = {
-        "accepted_risk_closed": close_accepted_risk_issues(adapter, repo_full_name, all_issues),
-        "escalated": escalate_overdue_issues(adapter, repo_full_name, all_issues),
-    }
+    lifecycle_results = None
+    if check_lifecycle:
+        adapter = get_adapter()
+        all_issues = list_issues(repo_full_name)
+        lifecycle_results = {
+            "accepted_risk_closed": close_accepted_risk_issues(adapter, repo_full_name, all_issues),
+            "escalated": escalate_overdue_issues(adapter, repo_full_name, all_issues),
+        }
     return {"systems": systems_results, "lifecycle": lifecycle_results}
 
 

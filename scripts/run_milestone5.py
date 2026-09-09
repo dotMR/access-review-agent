@@ -44,7 +44,10 @@ def case_25_single_system_scope() -> bool:
         shutil.copy(FIXTURE_DIR / "access_aws.csv", aws_only_dir / "access_aws.csv")
 
         try:
-            results = run_full_reconciliation(aws_only_dir, SCRATCH_REPO, systems=dispatch)
+            # check_lifecycle=False - see the identical note in run_milestone4.py
+            results = run_full_reconciliation(
+                aws_only_dir, SCRATCH_REPO, systems=dispatch, check_lifecycle=False
+            )
         except Exception as e:
             print(f"[FAIL] case-25-single-system-scope — run failed with only AWS's file present: {e}")
             return False
@@ -86,7 +89,8 @@ def _all_systems_fan_out(case_name: str, changed_files: list[str]) -> bool:
     expected = json.loads((FIXTURE_DIR / "expected.json").read_text())
     expected_set = findings_set(expected["findings"])
 
-    results = run_full_reconciliation(FIXTURE_DIR, SCRATCH_REPO, systems=dispatch)
+    # check_lifecycle=False - see the identical note in run_milestone4.py
+    results = run_full_reconciliation(FIXTURE_DIR, SCRATCH_REPO, systems=dispatch, check_lifecycle=False)
     opened = {
         (
             next(l for l in r.labels if l != system_name),
