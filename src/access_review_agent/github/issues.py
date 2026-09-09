@@ -34,6 +34,23 @@ SYSTEM_DISPLAY_NAMES = {
 }
 
 
+def _as_literal(value: str) -> str:
+    """Render a CSV/HRIS-sourced free-text value as an inert Markdown code
+    span rather than resumed prose. GitHub's Issue body renderer parses
+    @mentions, #issue-references, and every other bit of markdown syntax
+    from ordinary text but not from inside a code span - the same
+    protection the Source record line already relies on for the source
+    filename and employee_id. Fields like access_level, approved_by, and
+    role names are free text from external CSV data with no enforced
+    enum on the raw cell value (only the mapped/looked-up side is
+    validated), so a crafted value could otherwise trigger real
+    notifications or cross-issue links when the Issue is opened. A
+    literal backtick in the value itself would prematurely close the
+    span, so any backticks in the value are neutralized first.
+    """
+    return f"`{value.replace('`', chr(0x27))}`"
+
+
 def _format_title(finding: dict[str, Any]) -> str:
     category = finding["category"]
     system_name = finding["system_name"]
@@ -46,7 +63,7 @@ def _format_title(finding: dict[str, Any]) -> str:
 def _format_body(finding: dict[str, Any], repo_full_name: str, commit_sha: str | None) -> str:
     source = finding["source_record"]
     lines = [
-        f"**Access detail:** {finding['access_level']} access to {finding['system_name']}",
+        f"**Access detail:** {_as_literal(finding['access_level'])} access to {finding['system_name']}",
         f"**Expected per policy:** {finding['expected_per_policy']}",
     ]
 
@@ -62,11 +79,13 @@ def _format_body(finding: dict[str, Any], repo_full_name: str, commit_sha: str |
         lines.append(f"**Days dormant:** {finding['days_dormant']}")
     elif category == "unapproved":
         lines.append(f"**Date granted:** {finding['granted_date']}")
-        lines.append(f"**Approved by:** {finding['approved_by'] or 'none on file'}")
+        approved_by = finding["approved_by"]
+        lines.append(f"**Approved by:** {_as_literal(approved_by) if approved_by else 'none on file'}")
     elif category == "drift":
         for change in finding["role_change_history"]:
             lines.append(
-                f"**Role change ({change['date']}):** {change['old_role']} → {change['new_role']}"
+                f"**Role change ({_as_literal(change['date'])}):** "
+                f"{_as_literal(change['old_role'])} → {_as_literal(change['new_role'])}"
             )
 
     if commit_sha:

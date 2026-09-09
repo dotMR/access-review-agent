@@ -15,6 +15,14 @@ on:
       - "uv.lock"
       - ".github/workflows/eval.yml"
 
+# Explicit least-privilege, even though this workflow never writes
+# anything - the repo's own default_workflow_permissions is already
+# "read", but declaring it here means this workflow stays safe even if
+# that default is ever loosened, or the workflow file is reused
+# elsewhere with looser defaults.
+permissions:
+  contents: read
+
 jobs:
   eval:
     runs-on: ubuntu-latest
