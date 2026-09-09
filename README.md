@@ -8,7 +8,7 @@ Joiner-mover-leaver access review is normally a periodic, manual checklist — e
 
 It cross-references HR and IT access data against policy to flag orphaned, dormant (admin-level and ad-hoc), unapproved, drifted, and identity-resolution findings, and runs on three triggers: push-triggered whenever a commit touches source access data, HR data, or policy config in this repository; a monthly cron for an informational summary; and a quarterly cron for the formal audit record (`SPEC.md` §2).
 
-**Status:** in active development — 6 of 12 milestones built and merged (real detection logic, real GitHub Issue writing, real GitHub Actions dispatch, real Identity resolution via the Agent SDK); see `development-plan.md` for progress and what's left. The walkthrough below describes how to review the repository once the agent has run against the seeded demo timeline — there's no live data yet, so none of this exists in the repository today.
+**Status:** in active development — 7 of 12 milestones built and merged (real detection logic, real GitHub Issue writing, real GitHub Actions dispatch, real Identity resolution via the Agent SDK, real report generation and committing); see `development-plan.md` for progress and what's left. The walkthrough below describes how to review the repository once the agent has run against the seeded demo timeline — there's no live data yet, so none of this exists in the repository today.
 
 ## Reviewing the repository
 

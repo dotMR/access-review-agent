@@ -4,7 +4,7 @@ This is the settled *what*: data shapes, trigger/dispatch rules, tool registry, 
 
 For *why*, see `iam-review-agent-design.md` (design rationale) and `docs/adr/` (architecturally significant decisions). For vocabulary and actors, see `CONTEXT.md`. For the formal policy this agent enforces, see `access-control-policy.md`.
 
-**Status:** v1 Core not yet implemented. All pre-implementation design artifacts are complete — see `development-plan.md` for the build order, starting at Milestone 1.
+**Status:** in active development — 7 of 12 milestones built and merged; see `development-plan.md` for progress and the remaining build order.
 
 ---
 

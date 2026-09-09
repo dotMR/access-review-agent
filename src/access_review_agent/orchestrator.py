@@ -14,12 +14,14 @@ can scope to exactly what `dispatch.determine_dispatch()` decided — a
 single-system commit runs one unit, not all five.
 """
 
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from access_review_agent.github.adapter import IssueResult
+from access_review_agent.github.adapter import IssueResult, ReportCommitResult, get_adapter, list_issues
 from access_review_agent.github.issues import open_issue
 from access_review_agent.grounding import GroundingError
+from access_review_agent.reports import SYSTEM_LABEL, SYSTEM_ORDER, build_aggregate_report, build_per_system_report
 from access_review_agent.units import SYSTEMS, SystemDetectionUnit
 
 
@@ -55,4 +57,41 @@ def run_full_reconciliation(
             "opened": opened,
             "rejected": rejected,
         }
+    return results
+
+
+def generate_quarterly_reports(repo_full_name: str, period: str) -> dict[str, ReportCommitResult]:
+    """Roll up the quarter's already-existing Issue-tracker state (SPEC.md
+    §2 — detection already happened via push-triggered runs throughout
+    the quarter; this just reads and renders, no fresh detection) into
+    the two evidentiary reports per system plus the aggregate, committing
+    all six via commit_report — the sole caller of commit_report, same
+    "main agent only" pattern as open_issue.
+    """
+    all_issues = list_issues(repo_full_name)
+    per_system_issues = {
+        system_name: [i for i in all_issues if SYSTEM_LABEL[system_name] in i.labels]
+        for system_name in SYSTEM_ORDER
+    }
+
+    generated_at = datetime.now(timezone.utc).isoformat()
+    adapter = get_adapter()
+    results: dict[str, ReportCommitResult] = {}
+
+    for system_name in SYSTEM_ORDER:
+        content = build_per_system_report(
+            system_name, period, per_system_issues[system_name], generated_at
+        )
+        path = f"reports/{period}/{system_name}.md"
+        results[system_name] = adapter.commit_report(
+            repo_full_name, path, content, f"Per-system report: {system_name}, {period}"
+        )
+
+    aggregate_content = build_aggregate_report(period, per_system_issues, generated_at)
+    results["aggregate"] = adapter.commit_report(
+        repo_full_name,
+        f"reports/{period}/aggregate.md",
+        aggregate_content,
+        f"Aggregate report: {period}",
+    )
     return results
