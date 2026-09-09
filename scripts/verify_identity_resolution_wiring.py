@@ -14,6 +14,15 @@ free), so none of them would have caught a regression here even after
 the fix - this test mocks detect_identity_resolution instead of making a
 real Agent SDK call, so it can assert the merge actually happens without
 real network/API cost.
+
+A second case guards a related fix found in the same review: Identity
+resolution's own failures (a live Agent SDK call) were originally caught
+by the same narrow FileNotFoundError/ValueError clause as Tier 1's local
+file parsing, so an unrelated network/API error would have propagated
+out of run_full_reconciliation entirely, aborting every other system's
+processing too - reintroducing the exact class of problem Milestone 11's
+fail-loud-completeness guardrail was built to prevent. Identity
+resolution now gets its own, broader isolation boundary.
 """
 
 import sys
@@ -86,8 +95,59 @@ async def case_identity_resolution_merged_into_reconciliation() -> bool:
     return not problems
 
 
+async def case_identity_resolution_failure_isolated() -> bool:
+    """A live Agent SDK call is a fundamentally different failure surface
+    than Tier 1's local file parsing - a network/API error shouldn't
+    crash the whole reconciliation run any more than a malformed file
+    does. Simulates a real (not "bad data") failure for one system and
+    confirms it isolates the same way Milestone 11's fail-loud-
+    completeness guardrail already isolates a malformed file, while every
+    other system still completes normally in the same run.
+    """
+    from access_review_agent.orchestrator import run_full_reconciliation
+
+    async def flaky_detect(data_dir, system_name):
+        if system_name == "github":
+            raise RuntimeError("simulated Agent SDK network timeout")
+        return {"findings": [], "cost_usd": 0.0}
+
+    with patch(
+        "access_review_agent.orchestrator.detect_identity_resolution",
+        new=AsyncMock(side_effect=flaky_detect),
+    ):
+        results = await run_full_reconciliation(
+            FIXTURE_DIR, SCRATCH_REPO, systems=None, check_lifecycle=False
+        )
+
+    problems = []
+    github_result = results["systems"]["github"]
+    if not github_result["failed"] or "network timeout" not in github_result["failed"]:
+        problems.append(f"expected github to fail loudly with the simulated error, got: {github_result['failed']!r}")
+
+    # aws fails too, but for its own unrelated reason (the fixture's
+    # deliberately malformed file, same as case-39) - both failures must
+    # coexist in the same run without either one masking or crashing out
+    # the other systems.
+    for system_name in ("salesforce", "finance_erp", "vpn"):
+        summary = results["systems"][system_name]
+        if summary["failed"]:
+            problems.append(f"expected {system_name} to succeed despite github's failure, got: {summary['failed']!r}")
+
+    status = "PASS" if not problems else "FAIL"
+    print(
+        f"[{status}] identity-resolution-failure-isolated — a simulated Agent SDK error on one "
+        "system doesn't abort the run; every other system still completes"
+    )
+    for p in problems:
+        print(f"         {p}")
+    return not problems
+
+
 async def main() -> None:
-    results = [await case_identity_resolution_merged_into_reconciliation()]
+    results = [
+        await case_identity_resolution_merged_into_reconciliation(),
+        await case_identity_resolution_failure_isolated(),
+    ]
     total, passed = len(results), sum(results)
     print(f"\n{passed}/{total} cases passed")
     sys.exit(0 if passed == total else 1)

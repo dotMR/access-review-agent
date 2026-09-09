@@ -109,14 +109,34 @@ async def run_full_reconciliation(
         try:
             unit = SystemDetectionUnit(system_name, data_dir)
             findings = unit.detect_all()
-            identity_result = await detect_identity_resolution(data_dir, system_name)
-            findings = findings + identity_result["findings"]
         except (FileNotFoundError, ValueError) as e:
             systems_results[system_name] = {
                 "detected": 0,
                 "opened": [],
                 "rejected": [],
                 "failed": str(e),
+            }
+            continue
+
+        try:
+            identity_result = await detect_identity_resolution(data_dir, system_name)
+            findings = findings + identity_result["findings"]
+        except Exception as e:
+            # Deliberately broader than the FileNotFoundError/ValueError
+            # catch above: Identity resolution's failure surface is a live
+            # Agent SDK call, not just local file parsing, so a transient
+            # network/API error is a realistic, non-"genuine bug" failure
+            # mode here in a way it isn't for Tier 1 - and it shouldn't
+            # crash the whole run any more than a malformed file does.
+            # Isolated at the same system granularity Milestone 11 already
+            # established, not partial-credited against the Tier 1
+            # findings just computed above - same all-or-nothing-per-
+            # system semantics as the block above, just a second cause.
+            systems_results[system_name] = {
+                "detected": 0,
+                "opened": [],
+                "rejected": [],
+                "failed": f"Identity resolution failed: {e}",
             }
             continue
 
