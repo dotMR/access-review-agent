@@ -42,6 +42,7 @@ CASES = [
     "identity-resolution-restraint-insufficient-evidence",
     "identity-resolution-restraint-ambiguous-match",
     "identity-resolution-input-safety",
+    "identity-resolution-input-safety-identifier-vector",
 ]
 
 
