@@ -48,7 +48,9 @@ def _require_date_detected(finding: dict[str, Any]) -> date:
     return date.fromisoformat(date_detected)
 
 
-def _validate_orphaned(finding: dict[str, Any], access_row: dict, hris_row: dict | None) -> None:
+def _validate_orphaned(
+    finding: dict[str, Any], access_row: dict, hris_row: dict | None, hris_rows: list[dict]
+) -> None:
     if access_row["status"] != "active":
         raise GroundingError(
             f"Access record has status={access_row['status']!r}, not 'active' — "
@@ -64,7 +66,7 @@ def _validate_orphaned(finding: dict[str, Any], access_row: dict, hris_row: dict
 
 
 def _validate_dormant_admin(
-    finding: dict[str, Any], access_row: dict, hris_row: dict | None
+    finding: dict[str, Any], access_row: dict, hris_row: dict | None, hris_rows: list[dict]
 ) -> None:
     if access_row["access_level"] != "admin":
         raise GroundingError(f"Access record has access_level={access_row['access_level']!r}, not 'admin'")
@@ -84,7 +86,7 @@ def _validate_dormant_admin(
 
 
 def _validate_dormant_ad_hoc(
-    finding: dict[str, Any], access_row: dict, hris_row: dict | None
+    finding: dict[str, Any], access_row: dict, hris_row: dict | None, hris_rows: list[dict]
 ) -> None:
     if access_row["status"] != "active":
         raise GroundingError(f"Access record has status={access_row['status']!r}, not 'active'")
@@ -110,7 +112,9 @@ def _validate_dormant_ad_hoc(
         )
 
 
-def _validate_unapproved(finding: dict[str, Any], access_row: dict, hris_row: dict | None) -> None:
+def _validate_unapproved(
+    finding: dict[str, Any], access_row: dict, hris_row: dict | None, hris_rows: list[dict]
+) -> None:
     if access_row["status"] != "active":
         raise GroundingError(f"Access record has status={access_row['status']!r}, not 'active'")
     if access_row["approved_by"]:
@@ -119,7 +123,9 @@ def _validate_unapproved(finding: dict[str, Any], access_row: dict, hris_row: di
         )
 
 
-def _validate_drift(finding: dict[str, Any], access_row: dict, hris_row: dict | None) -> None:
+def _validate_drift(
+    finding: dict[str, Any], access_row: dict, hris_row: dict | None, hris_rows: list[dict]
+) -> None:
     import json
 
     if access_row["status"] != "active":
@@ -138,12 +144,49 @@ def _validate_drift(finding: dict[str, Any], access_row: dict, hris_row: dict | 
         )
 
 
-_VALIDATORS: dict[str, Callable[[dict[str, Any], dict, dict | None], None]] = {
+def _validate_identity_resolution(
+    finding: dict[str, Any], access_row: dict, hris_row: dict | None, hris_rows: list[dict]
+) -> None:
+    if access_row["status"] != "active":
+        raise GroundingError(f"Access record has status={access_row['status']!r}, not 'active'")
+    if hris_row is not None:
+        raise GroundingError(
+            f"employee_id={finding['employee_id']!r} matches an HRIS record directly — "
+            "not Identity resolution's territory (that's Orphaned's, per the anti-join "
+            "distinction in SPEC.md §4)"
+        )
+
+    outcome = finding.get("resolution_outcome")
+    if outcome == "stale-ownership":
+        owner_id = finding.get("claimed_owner_employee_id")
+        if not owner_id:
+            raise GroundingError("stale-ownership finding missing claimed_owner_employee_id")
+        owner_row = next((r for r in hris_rows if r["employee_id"] == owner_id), None)
+        if owner_row is None:
+            raise GroundingError(f"No HRIS record for claimed owner employee_id={owner_id!r}")
+        if owner_row["status"] != "terminated":
+            raise GroundingError(
+                f"Claimed owner has HRIS status={owner_row['status']!r}, not 'terminated' — "
+                "stale-ownership requires the documented owner to actually be terminated"
+            )
+    elif outcome != "unresolved":
+        raise GroundingError(
+            f"Unrecognized resolution_outcome={outcome!r} — expected 'unresolved' or "
+            "'stale-ownership' (the only two outcomes that produce a Finding)"
+        )
+    # "unresolved" itself isn't independently re-derivable here - whether the
+    # evidence was genuinely insufficient/ambiguous is the model's own
+    # judgment call, which is what eval-cases.md cases 21-22 test directly,
+    # not something grounding can re-check against source data.
+
+
+_VALIDATORS: dict[str, Callable[[dict[str, Any], dict, dict | None, list[dict]], None]] = {
     "orphaned": _validate_orphaned,
     "dormant-admin": _validate_dormant_admin,
     "dormant-ad-hoc": _validate_dormant_ad_hoc,
     "unapproved": _validate_unapproved,
     "drift": _validate_drift,
+    "identity-resolution": _validate_identity_resolution,
 }
 
 
@@ -173,4 +216,4 @@ def validate_finding(finding: dict[str, Any], data_dir: Path) -> None:
     hris_rows = read_hris(data_dir / "system_hr.csv")
     hris_row = next((r for r in hris_rows if r["employee_id"] == employee_id), None)
 
-    validator(finding, access_row, hris_row)
+    validator(finding, access_row, hris_row, hris_rows)
