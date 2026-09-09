@@ -18,6 +18,12 @@ name: Quarterly Audit Report
 # explicit, deliberate opt-in - only available as a workflow_dispatch
 # input (a human checks it each time), never true on the schedule
 # trigger, which has no inputs to read from at all.
+#
+# Two jobs (Milestone 11): quarterly-report (no gate) commits the six
+# report files; create-release (gated behind the quarterly-release-approval
+# environment's required-reviewer protection rule - SPEC.md §7's
+# human-in-the-loop publish gate) then tags and uploads the Release,
+# reading the just-committed files back rather than re-deriving them.
 on:
   workflow_dispatch:
     inputs:
@@ -43,6 +49,8 @@ permissions:
 jobs:
   quarterly-report:
     runs-on: ubuntu-latest
+    outputs:
+      period: ${{ steps.period.outputs.period }}
     steps:
       - uses: actions/checkout@v4
 
@@ -90,3 +98,31 @@ jobs:
           # correctly treats as disabled - no separate branching needed.
           ENABLE_RISK_ASSESSMENT_NARRATIVE: ${{ inputs.generate_narrative }}
         run: uv run python scripts/run_quarterly_reports.py
+
+  create-release:
+    needs: quarterly-report
+    runs-on: ubuntu-latest
+    # Human-in-the-loop publish gate (SPEC.md §7): this job doesn't even
+    # start until a required reviewer on the quarterly-release-approval
+    # environment approves it - a real GitHub Actions environment
+    # protection rule, not application-level logic pretending to gate
+    # something.
+    environment: quarterly-release-approval
+    steps:
+      - uses: actions/checkout@v4
+        # Runs AFTER quarterly-report's commits landed on main - this
+        # checkout picks them up, which is what create_quarterly_release
+        # reads from rather than re-deriving the report content.
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Create Release
+        env:
+          PERIOD: ${{ needs.quarterly-report.outputs.period }}
+        run: uv run python scripts/create_quarterly_release.py

@@ -15,21 +15,31 @@ single-system commit runs one unit, not all five.
 """
 
 import re
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from access_review_agent.github.adapter import IssueResult, ReportCommitResult, get_adapter, list_issues
+from access_review_agent.github.adapter import (
+    IssueResult,
+    ReleaseResult,
+    ReportCommitResult,
+    get_adapter,
+    list_issues,
+)
 from access_review_agent.github.issues import open_issue
 from access_review_agent.grounding import GroundingError
 from access_review_agent.lifecycle import close_accepted_risk_issues, escalate_overdue_issues
 from access_review_agent.narrative import synthesize_narrative
+from access_review_agent.pdf_export import render_pdf
 from access_review_agent.reports import (
+    SYSTEM_DISPLAY,
     SYSTEM_LABEL,
     SYSTEM_ORDER,
     build_aggregate_report,
     build_monthly_report,
     build_per_system_report,
+    summary_counts,
 )
 from access_review_agent.risk_assessment import build_risk_assessment_entries
 from access_review_agent.tools.policy import DEFAULT_ROLE_ACCESS_MAPPING_PATH, read_policy
@@ -66,16 +76,35 @@ def run_full_reconciliation(
     (scripts/run_milestone9.py) and doesn't need re-exercising through
     every other milestone's detection tests too.
 
-    Returns {"systems": {<system_name>: {detected, opened, rejected}},
-    "lifecycle": {accepted_risk_closed, escalated} | None} - two clearly
-    separate shapes under their own keys, not flattened together, so a
-    caller iterating per-system results can't accidentally trip over the
-    differently-shaped lifecycle entry.
+    Per-system failure isolation (SPEC.md §7's fail-loud completeness,
+    Milestone 11): a malformed source file for one system (missing
+    columns, same-file consistency mismatch, a missing file entirely)
+    doesn't abort the whole run - that system's entry gets "failed" set
+    to a loud, specific reason, and every other system still completes
+    and reports normally. Only FileNotFoundError/ValueError are caught
+    here (the two real "bad source data" exceptions read_and_validate
+    raises) - anything else is a genuine bug, not a data problem, and
+    should still crash loudly rather than being silently absorbed.
+
+    Returns {"systems": {<system_name>: {detected, opened, rejected,
+    failed}}, "lifecycle": {accepted_risk_closed, escalated} | None} -
+    two clearly separate shapes under their own keys, not flattened
+    together, so a caller iterating per-system results can't accidentally
+    trip over the differently-shaped lifecycle entry.
     """
     systems_results: dict[str, Any] = {}
     for system_name in (systems if systems is not None else SYSTEMS):
-        unit = SystemDetectionUnit(system_name, data_dir)
-        findings = unit.detect_all()
+        try:
+            unit = SystemDetectionUnit(system_name, data_dir)
+            findings = unit.detect_all()
+        except (FileNotFoundError, ValueError) as e:
+            systems_results[system_name] = {
+                "detected": 0,
+                "opened": [],
+                "rejected": [],
+                "failed": str(e),
+            }
+            continue
 
         opened: list[IssueResult] = []
         rejected: list[dict[str, Any]] = []
@@ -89,6 +118,7 @@ def run_full_reconciliation(
             "detected": len(findings),
             "opened": opened,
             "rejected": rejected,
+            "failed": None,
         }
 
     lifecycle_results = None
@@ -126,7 +156,13 @@ def generate_monthly_reports(
     if not _MONTH_PERIOD_RE.match(period):
         raise ValueError(f"period must match YYYY-MM (e.g. 2026-02), got: {period!r}")
 
-    run_full_reconciliation(data_dir, repo_full_name, systems=None, commit_sha=commit_sha)
+    reconciliation = run_full_reconciliation(data_dir, repo_full_name, systems=None, commit_sha=commit_sha)
+    for system_name, summary in reconciliation["systems"].items():
+        if summary["failed"]:
+            # Per-system failure isolation (SPEC.md §7, Milestone 11): loud
+            # and visible, but the monthly report for every OTHER system
+            # still gets built and committed below regardless.
+            print(f"::error::{system_name} FAILED: {summary['failed']}")
 
     all_issues = list_issues(repo_full_name)
     generated_at = datetime.now(timezone.utc).isoformat()
@@ -154,8 +190,73 @@ NARRATIVE_DISABLED_NOTE = (
 )
 
 
+def _build_release_payload(
+    period: str, report_contents: dict[str, str], all_issues: list
+) -> tuple[str, str, dict[str, bytes]]:
+    """(title, body, assets) for the quarterly Release (SPEC.md §6) -
+    shared by generate_quarterly_reports (single-shot, no gate - manual/
+    testing use) and create_quarterly_release (the real two-job,
+    human-in-the-loop path, Milestone 11), so the two can't drift apart.
+    `report_contents` must have all five system names plus "aggregate".
+    """
+    year, quarter = period.split("-Q")
+    counts = summary_counts(all_issues)
+    report_links = "\n".join(f"- [{SYSTEM_DISPLAY[s]}](reports/{period}/{s}.md)" for s in SYSTEM_ORDER)
+    body = (
+        f"{counts['total']} findings identified this quarter. {counts['remediated']} "
+        f"remediated, {counts['open']} open, {counts['accepted_risk']} accepted as risk. "
+        f"{counts['escalated']} escalation(s) this period.\n\n"
+        f"**Reports:**\n{report_links}\n- [Aggregate](reports/{period}/aggregate.md)"
+    )
+    assets = {f"{name}.md": content.encode("utf-8") for name, content in report_contents.items()}
+    assets["aggregate.pdf"] = render_pdf(report_contents["aggregate"])
+    title = f"Q{quarter} {year} Quarterly Access Review Audit"
+    return title, body, assets
+
+
+def create_quarterly_release(repo_full_name: str, period: str, checkout_dir: Path) -> ReleaseResult:
+    """The Release-creation half of SPEC.md §6, deliberately split from
+    generate_quarterly_reports (Milestone 11) so it can run as its own
+    job, gated behind a GitHub Actions environment protection rule (the
+    human-in-the-loop publish gate, SPEC.md §7) - AFTER the report-
+    generation job's commits have already landed. Reads the six just-
+    committed report files from the LOCAL checkout (which, by the time
+    this job's own checkout step runs, already includes the previous
+    job's commits) rather than re-deriving them, avoiding a second,
+    redundant set of commit_report calls that would otherwise create
+    duplicate no-op commits.
+
+    Tags whatever commit `checkout_dir` is currently at - the caller
+    (scripts/create_quarterly_release.py) resolves that via `git
+    rev-parse HEAD` after its own checkout, since the workflow-trigger-
+    time `github.sha` context value predates the report-generation job's
+    commits and would tag the wrong commit.
+    """
+    if not _PERIOD_RE.match(period):
+        raise ValueError(f"period must match YYYY-Qn (e.g. 2026-Q1), got: {period!r}")
+
+    report_dir = checkout_dir / "reports" / period
+    report_contents = {name: (report_dir / f"{name}.md").read_text() for name in SYSTEM_ORDER}
+    report_contents["aggregate"] = (report_dir / "aggregate.md").read_text()
+
+    all_issues = list_issues(repo_full_name)
+    title, body, assets = _build_release_payload(period, report_contents, all_issues)
+
+    commit_sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=checkout_dir, capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+    adapter = get_adapter()
+    return adapter.create_release(
+        repo_full_name, tag=period, title=title, body=body, target_commitish=commit_sha, assets=assets
+    )
+
+
 async def generate_quarterly_reports(
-    repo_full_name: str, period: str, checkout_dir: Path, generate_narrative: bool = False
+    repo_full_name: str,
+    period: str,
+    checkout_dir: Path,
+    generate_narrative: bool = False,
 ) -> dict[str, ReportCommitResult]:
     """Roll up the quarter's already-existing Issue-tracker state (SPEC.md
     §2 — detection already happened via push-triggered runs throughout
@@ -181,6 +282,11 @@ async def generate_quarterly_reports(
     Risk Rating scores are still computed and shown either way (free,
     local); only the narrative text itself is skipped when False, with
     an explicit placeholder rather than a silent gap.
+
+    Does NOT create the Release - see create_quarterly_release for that
+    (Milestone 11 split it out deliberately so the human-in-the-loop
+    publish gate can sit in front of release creation specifically,
+    without also re-running detection/report generation).
     """
     if not _PERIOD_RE.match(period):
         raise ValueError(f"period must match YYYY-Qn (e.g. 2026-Q1), got: {period!r}")
@@ -216,11 +322,13 @@ async def generate_quarterly_reports(
     generated_at = datetime.now(timezone.utc).isoformat()
     adapter = get_adapter()
     results: dict[str, ReportCommitResult] = {}
+    report_contents: dict[str, str] = {}
 
     for system_name in SYSTEM_ORDER:
         content = build_per_system_report(
             system_name, period, per_system_issues[system_name], generated_at
         )
+        report_contents[system_name] = content
         path = f"reports/{period}/{system_name}.md"
         results[system_name] = adapter.commit_report(
             repo_full_name, path, content, f"Per-system report: {system_name}, {period}"
@@ -229,10 +337,12 @@ async def generate_quarterly_reports(
     aggregate_content = build_aggregate_report(
         period, per_system_issues, generated_at, risk_assessment_rows=risk_assessment_rows
     )
+    report_contents["aggregate"] = aggregate_content
     results["aggregate"] = adapter.commit_report(
         repo_full_name,
         f"reports/{period}/aggregate.md",
         aggregate_content,
         f"Aggregate report: {period}",
     )
+
     return results

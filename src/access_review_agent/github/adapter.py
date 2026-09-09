@@ -13,7 +13,9 @@ Actions secret - the code never knows which source it came from.
 
 import os
 import subprocess
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 from github import Auth, Github, UnknownObjectException
@@ -34,6 +36,14 @@ class ReportCommitResult:
     path: str
     commit_sha: str | None  # None in dry-run mode
     html_url: str | None
+    dry_run: bool
+
+
+@dataclass
+class ReleaseResult:
+    tag: str
+    html_url: str | None
+    asset_names: list[str]
     dry_run: bool
 
 
@@ -68,6 +78,16 @@ class GitHubAdapter(Protocol):
 
     def add_comment(self, repo_full_name: str, issue_number: int, body: str) -> None: ...
 
+    def create_release(
+        self,
+        repo_full_name: str,
+        tag: str,
+        title: str,
+        body: str,
+        target_commitish: str,
+        assets: dict[str, bytes],
+    ) -> ReleaseResult: ...
+
 
 class DryRunAdapter:
     """Logs what would happen. Never touches the network."""
@@ -100,6 +120,21 @@ class DryRunAdapter:
 
     def add_comment(self, repo_full_name: str, issue_number: int, body: str) -> None:
         print(f"[DRY RUN] Would comment on Issue #{issue_number} on {repo_full_name}:\n{body}")
+
+    def create_release(
+        self,
+        repo_full_name: str,
+        tag: str,
+        title: str,
+        body: str,
+        target_commitish: str,
+        assets: dict[str, bytes],
+    ) -> ReleaseResult:
+        print(f"[DRY RUN] Would create Release {tag!r} on {repo_full_name} at {target_commitish}:")
+        print(f"  Title: {title}")
+        print(f"  Body:\n{body}")
+        print(f"  Assets: {list(assets.keys())} ({sum(len(v) for v in assets.values())} bytes total)")
+        return ReleaseResult(tag=tag, html_url=None, asset_names=list(assets.keys()), dry_run=True)
 
 
 class RealAdapter:
@@ -153,6 +188,33 @@ class RealAdapter:
     def add_comment(self, repo_full_name: str, issue_number: int, body: str) -> None:
         repo = self._client.get_repo(repo_full_name)
         repo.get_issue(issue_number).create_comment(body)
+
+    def create_release(
+        self,
+        repo_full_name: str,
+        tag: str,
+        title: str,
+        body: str,
+        target_commitish: str,
+        assets: dict[str, bytes],
+    ) -> ReleaseResult:
+        """Tags target_commitish (the commit commit_report just wrote the
+        reports in, per SPEC.md §6's sequencing), then uploads each asset.
+        PyGithub's upload_asset needs a real file path, not bytes, so each
+        asset is written to a temp file first and cleaned up after.
+        """
+        repo = self._client.get_repo(repo_full_name)
+        release = repo.create_git_release(
+            tag=tag, name=title, message=body, target_commitish=target_commitish
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, content in assets.items():
+                asset_path = Path(tmp) / name
+                asset_path.write_bytes(content)
+                release.upload_asset(str(asset_path), name=name)
+        return ReleaseResult(
+            tag=tag, html_url=release.html_url, asset_names=list(assets.keys()), dry_run=False
+        )
 
 
 def _resolve_token() -> str | None:
