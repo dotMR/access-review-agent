@@ -4,7 +4,7 @@ This is the settled *what*: data shapes, trigger/dispatch rules, tool registry, 
 
 For *why*, see `iam-review-agent-design.md` (design rationale) and `docs/adr/` (architecturally significant decisions). For vocabulary and actors, see `CONTEXT.md`. For the formal policy this agent enforces, see `access-control-policy.md`.
 
-**Status:** in active development — 10 of 12 milestones built and merged; see `development-plan.md` for progress and the remaining build order.
+**Status:** in active development — 11 of 12 milestones built and merged; see `development-plan.md` for progress and the remaining build order.
 
 ---
 
@@ -200,10 +200,7 @@ From `iam-review-agent-design.md`'s Guardrails section, restated as commitments:
 ## 8. v1 Core scope
 
 **In:**
-Orphaned (both variants), Dormant admin-level (Evidentiary only), Dormant ad-hoc (Evidentiary only), Unapproved (Evidentiary only), Identity resolution, Drift (Evidentiary only), Risk Assessment synthesis, Unremediated-findings Escalation (fires at most once per Finding — ADR-0003), the Monthly Operational Flags summary (runs full detection monthly to catch quiet systems, but stays informational — not evidentiary, no SLA, no Escalation eligibility — ADR-0003), the trend line, remediation re-check/auto-close, Accepted Risk.
+Orphaned (both variants), Dormant admin-level (Evidentiary only), Dormant ad-hoc (Evidentiary only), Unapproved (Evidentiary only), Identity resolution, Drift (Evidentiary only), Risk Assessment synthesis, Unremediated-findings Escalation (fires at most once per Finding — ADR-0003), the Monthly Operational Flags summary (runs full detection monthly to catch quiet systems, but stays informational — not evidentiary, no SLA, no Escalation eligibility — ADR-0003), the trend line, remediation re-check/auto-close, Accepted Risk, PDF generation for the aggregate report (Markdown → HTML → PDF via `markdown` + `xhtml2pdf`, both pure Python — a mechanical rendering step with no reasoning in it, so eval cases still test Markdown content only and don't cover PDF output; built in Milestone 11 once the Release Gate needed a real PDF asset, having originally been deferred here for the same "no reasoning in it" reason).
 
 **Out of scope:**
 Dormant admin-level's monthly Operational variant, Dormant ad-hoc's own monthly Operational variant, Drift's monthly Operational variant, the grant-time Unapproved gate, contractor end-date expiry detection. Each of the three monthly Operational variants is a deliberate product boundary (Escalation reserved for genuinely acute risk, per Orphaned), not a cost cut — see `iam-review-agent-design.md` for the reasoning. See `future-capabilities.md` for larger, more substantial candidate capabilities (Predictive prioritization, Certification-triage by novelty, Policy-to-config drift detection) kept separate from this list given their depth.
-
-**Deferred:**
-The PDF generation mechanism (which tool/library renders the aggregate report's Markdown to PDF) — a mechanical rendering step with no reasoning in it, so eval cases test Markdown content only and don't cover PDF output.

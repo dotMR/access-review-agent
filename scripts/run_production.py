@@ -45,7 +45,16 @@ def main() -> None:
 
     results = run_full_reconciliation(data_dir, repo_full_name, systems=dispatch, commit_sha=commit_sha)
 
+    any_failed = False
     for system_name, summary in results["systems"].items():
+        if summary["failed"]:
+            # ::error:: surfaces this in the Action run's UI/annotations,
+            # same visibility as the workflow's own period-validation
+            # errors - a malformed file for one system must be loud and
+            # visible (SPEC.md §7), not a line buried in scrollback.
+            print(f"::error::{system_name} FAILED: {summary['failed']}")
+            any_failed = True
+            continue
         print(
             f"{system_name}: {summary['detected']} detected, "
             f"{len(summary['opened'])} opened, {len(summary['rejected'])} rejected"
@@ -58,6 +67,13 @@ def main() -> None:
         f"lifecycle: {len(lifecycle['escalated'])} escalated, "
         f"{len(lifecycle['accepted_risk_closed'])} accepted-risk closed"
     )
+
+    if any_failed:
+        # Non-zero exit marks the Action run itself as failed - a human
+        # must notice and investigate - but only AFTER every other
+        # system's real work above already completed, per-system
+        # isolation intact regardless of this run's own final exit code.
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -84,6 +84,21 @@ def category_of(issue: IssueInfo) -> str | None:
     return next((label for label in issue.labels if label in CATEGORY_DISPLAY), None)
 
 
+def summary_counts(issues: list[IssueInfo]) -> dict[str, int]:
+    """Total/remediated/open/accepted-risk/escalated counts across
+    `issues` - shared by build_aggregate_report's Executive Summary and
+    the quarterly Release body (SPEC.md §6), so the two numbers can
+    never drift apart from each other.
+    """
+    return {
+        "total": len(issues),
+        "remediated": sum(1 for i in issues if status_of(i) == "Remediated"),
+        "open": sum(1 for i in issues if status_of(i) == "Open"),
+        "accepted_risk": sum(1 for i in issues if status_of(i) == "Accepted risk"),
+        "escalated": sum(1 for i in issues if "escalated" in i.labels),
+    }
+
+
 def parse_issue_title(title: str) -> str:
     """Extract the identity/identifier from a title of the form
     "{Category} — {identity} ({System})" (SPEC.md §4).
@@ -135,23 +150,55 @@ def _counts_table(issues: list[IssueInfo], rows: list[tuple[str, str]]) -> list[
     return lines
 
 
+_ESCAPE_PATTERN = re.compile(r"(&|<|>|\||@|#|!\[)")
+_ESCAPE_REPLACEMENTS = {
+    # HTML-escape first, most important: markdown.markdown() (used by
+    # pdf_export.py's Markdown -> HTML -> PDF pipeline, Milestone 11)
+    # passes raw HTML through UNCHANGED by default - a literal
+    # <img src="http://internal-service/..."> or <script> tag typed
+    # directly into an Issue title/body would otherwise flow straight
+    # through into the rendered PDF. Confirmed exploitable with a local
+    # test HTTP server before this fix: xhtml2pdf genuinely issues the
+    # request, including any attacker-chosen query string, and does so
+    # even when its link_callback is set to refuse every resource - its
+    # image-fetching path bypasses that callback entirely, so escaping
+    # the source content is the only reliable defense, not a fetch-time
+    # allowlist.
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    # A literal `|` would also break the table's column structure
+    # regardless of mention/reference/SSRF risk, so it's escaped
+    # unconditionally, not just wrapped.
+    "|": "\\|",
+    "@": "&#64;",
+    "#": "&#35;",
+    # Markdown's own image-trigger sequence - HTML-escaping <, > alone
+    # doesn't stop this, since ![...](...) uses neither character. Only
+    # the two-char "![" trigger needs breaking; a bare "[" (plain link,
+    # no fetch) is left alone.
+    "![": "!&#91;",
+}
+
+
 def _escape_table_cell(value: str) -> str:
-    """Escape a value parsed from an Issue's title/body for safe embedding
-    in a Markdown table cell. Issues are editable by anyone with write
-    access to this repo's Issues, not just the agent that originally
-    opened them - the same untrusted-content risk github/issues.py's
-    _as_literal() defends against when *writing* an Issue body applies
-    here too when *reading* one back into a report. A literal `|`
-    would also break the table's column structure regardless of mention/
-    reference risk, so it's escaped unconditionally, not just wrapped.
+    """Escape a value parsed from an Issue's title/body (or produced by
+    an LLM, e.g. Risk Assessment narrative text) for safe embedding in a
+    Markdown table cell that may later be rendered to both an Issue-
+    tracker-adjacent report AND a PDF (Milestone 11). Issues are editable
+    by anyone with write access to this repo's Issues, not just the
+    agent that originally opened them - the same untrusted-content risk
+    github/issues.py's _as_literal() defends against when *writing* an
+    Issue body applies here too when *reading* one back into a report.
+
+    Single-pass regex substitution, not chained .replace() calls: several
+    of the replacement strings ("&amp;", "&#64;", "&#35;", "!&#91;")
+    themselves contain characters this function also escapes, so a
+    second sequential .replace() pass would corrupt the first
+    substitution's own output. re.sub with a callback only matches
+    against the original text, never re-scans what it just inserted.
     """
-    value = value.replace("|", "\\|")
-    # Single-pass substitution, not chained .replace() calls: both
-    # replacement strings ("&#64;", "&#35;") themselves contain "#", so
-    # a second .replace("#", ...) pass would corrupt the first
-    # substitution's own output. re.sub with a callback only matches
-    # against the original text, never re-scans what it just inserted.
-    return re.sub(r"[@#]", lambda m: {"@": "&#64;", "#": "&#35;"}[m.group()], value)
+    return _ESCAPE_PATTERN.sub(lambda m: _ESCAPE_REPLACEMENTS[m.group()], value)
 
 
 def _finding_rows(issues: list[IssueInfo], category: str) -> list[dict[str, Any]]:
@@ -354,10 +401,9 @@ def build_aggregate_report(
     caller that hasn't computed Risk Assessment at all.
     """
     all_issues = [i for issues in per_system_issues.values() for i in issues]
-    total_findings = len(all_issues)
-    n_remediated = sum(1 for i in all_issues if status_of(i) == "Remediated")
-    n_open = sum(1 for i in all_issues if status_of(i) == "Open")
-    n_accepted = sum(1 for i in all_issues if status_of(i) == "Accepted risk")
+    counts = summary_counts(all_issues)
+    total_findings, n_remediated, n_open = counts["total"], counts["remediated"], counts["open"]
+    n_accepted = counts["accepted_risk"]
 
     lines = [
         f"# Quarterly Access Review Audit Report — {period}",
@@ -461,7 +507,8 @@ def build_aggregate_report(
             f"[{SYSTEM_DISPLAY[s]}](./{s.replace('_', '-')}.md)" for s in SYSTEM_ORDER
         ),
         f"- Data snapshot: {data_snapshot_ref}",
-        "- PDF export: _not yet implemented (out of scope per SPEC.md §8's Deferred section)_",
+        "- PDF export: bundled as a Release asset (`aggregate.pdf`) alongside the tagged commit "
+        "- see the Releases page for this period, not this Markdown file's own directory.",
         "",
         "---",
         "<!-- Out of scope (not shown in this report): Dormant admin-level's, Dormant "
