@@ -118,11 +118,18 @@ def run_orchestrator_check() -> bool:
     expected = json.loads((FIXTURE_DIR / "expected.json").read_text())
     expected_set = findings_set(expected["findings"])
 
-    results = run_full_reconciliation(FIXTURE_DIR, "dotMR/access-review-agent-scratch")
+    # check_lifecycle=False: this suite tests detection/orchestration
+    # correctness, not lifecycle mechanics (Milestone 9's own
+    # scripts/run_milestone9.py already covers those, credential-free).
+    # list_issues is a real read that needs a valid token even against a
+    # private repo - CI runs this suite with none, by design.
+    results = run_full_reconciliation(
+        FIXTURE_DIR, "dotMR/access-review-agent-scratch", check_lifecycle=False
+    )
 
     opened_set = set()
     total_rejected = 0
-    for system_name, summary in results.items():
+    for system_name, summary in results["systems"].items():
         for issue_result in summary["opened"]:
             # Recover (category, system_name, employee_id) from the title/labels
             # the same way an external reviewer would - not from internal state.

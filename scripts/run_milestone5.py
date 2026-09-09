@@ -44,18 +44,24 @@ def case_25_single_system_scope() -> bool:
         shutil.copy(FIXTURE_DIR / "access_aws.csv", aws_only_dir / "access_aws.csv")
 
         try:
-            results = run_full_reconciliation(aws_only_dir, SCRATCH_REPO, systems=dispatch)
+            # check_lifecycle=False - see the identical note in run_milestone4.py
+            results = run_full_reconciliation(
+                aws_only_dir, SCRATCH_REPO, systems=dispatch, check_lifecycle=False
+            )
         except Exception as e:
             print(f"[FAIL] case-25-single-system-scope — run failed with only AWS's file present: {e}")
             return False
 
-    if set(results.keys()) != {"aws"}:
-        print(f"[FAIL] case-25-single-system-scope — orchestrator touched {set(results.keys())}, expected {{'aws'}}")
+    if set(results["systems"].keys()) != {"aws"}:
+        print(
+            f"[FAIL] case-25-single-system-scope — orchestrator touched "
+            f"{set(results['systems'].keys())}, expected {{'aws'}}"
+        )
         return False
 
     opened = {
         (next(l for l in r.labels if l != "aws"), "aws", r.body.split("employee_id=")[1].rstrip("`"))
-        for r in results["aws"]["opened"]
+        for r in results["systems"]["aws"]["opened"]
     }
     expected = {("orphaned", "aws", "E9001")}
     if opened != expected:
@@ -83,14 +89,15 @@ def _all_systems_fan_out(case_name: str, changed_files: list[str]) -> bool:
     expected = json.loads((FIXTURE_DIR / "expected.json").read_text())
     expected_set = findings_set(expected["findings"])
 
-    results = run_full_reconciliation(FIXTURE_DIR, SCRATCH_REPO, systems=dispatch)
+    # check_lifecycle=False - see the identical note in run_milestone4.py
+    results = run_full_reconciliation(FIXTURE_DIR, SCRATCH_REPO, systems=dispatch, check_lifecycle=False)
     opened = {
         (
             next(l for l in r.labels if l != system_name),
             system_name,
             r.body.split("employee_id=")[1].rstrip("`"),
         )
-        for system_name, summary in results.items()
+        for system_name, summary in results["systems"].items()
         for r in summary["opened"]
     }
     if opened != expected_set:
