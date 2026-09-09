@@ -6,9 +6,8 @@ the correct title/body/labels, and an ungrounded finding does not open
 one. A category is wired up here only once grounding.py has its own
 validator for it - adding a new category means adding its grounding
 check first, not the other way around (Milestone 3 added the four
-Tier 1 categories that came after Orphaned; Identity resolution and
-Drift's Tier 2 reasoning-based cousins are not in scope until
-Milestone 6 onward).
+Tier 1 categories that came after Orphaned; Identity resolution, the
+one Tier 2 category, wasn't in scope until Milestone 6).
 """
 
 from pathlib import Path
@@ -95,10 +94,11 @@ def _format_body(finding: dict[str, Any], repo_full_name: str, commit_sha: str |
             )
 
     if commit_sha:
-        # data/ is production's fixed DATA_DIR convention (scripts/run_production.py) -
-        # the only caller that ever supplies commit_sha, so this coupling is narrow
-        # and documented rather than inferred. Eval/dry-run callers pass no SHA and
-        # get the plain bare-filename citation instead, matching their data_dir
+        # data/ is production's fixed DATA_DIR convention - both real callers that
+        # ever supply commit_sha (scripts/run_production.py, run_monthly_reports.py)
+        # read from that directory, so this coupling is narrow and documented rather
+        # than inferred. Eval/dry-run callers pass no SHA and get the plain
+        # bare-filename citation instead, matching their data_dir
         # (evals/cases/<case>/, not data/) - a permalink there would point nowhere.
         blob_url = f"https://github.com/{repo_full_name}/blob/{commit_sha}/data/{source['file']}"
         lines.append(
