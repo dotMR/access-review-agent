@@ -128,7 +128,8 @@ def open_issue(
     repo_full_name: str,
     data_dir: Path,
     commit_sha: str | None = None,
-) -> IssueResult:
+    existing_open_titles: set[str] | None = None,
+) -> IssueResult | None:
     """Validate `finding` against source data (the grounding gate), then
     open a GitHub Issue for it via the dry-run-capable adapter.
 
@@ -137,15 +138,35 @@ def open_issue(
     (Milestone 5) - only the real production entrypoint ever has a real
     triggering commit SHA to supply; eval/dry-run callers leave it unset.
 
+    `existing_open_titles`, when given, is the set of every currently-open
+    Issue's title in the repo. SPEC.md §4's title format ("{Category} —
+    {identity} ({System})") is already the natural key this system uses
+    to mean "this specific finding" - a finding whose computed title
+    matches an already-open Issue is the SAME finding still present on a
+    later run, not a new one, and returns None rather than opening a
+    duplicate. Found live during Milestone 12's scratch-repo trial: a
+    push touching system_hr.csv/policy-config.yaml/role-access-mapping.yaml
+    fans out to all five systems (dispatch.py) and re-detects every
+    already-known, still-open finding right along with anything genuinely
+    new - with nothing to recognize "already open," every such push
+    duplicated every one of them, indefinitely. None (the default) skips
+    this check entirely - every caller before this fix, and every
+    credential-free eval suite, behaves exactly as before; only
+    run_full_reconciliation, which already has a real list_issues read
+    whenever check_lifecycle=True, passes a real set.
+
     Raises GroundingError (from grounding.py) without opening anything if
     the finding doesn't hold up against data_dir's source records.
     """
     validate_finding(finding, data_dir)
+    title = _format_title(finding)
+    if existing_open_titles is not None and title in existing_open_titles:
+        return None
 
     adapter: GitHubAdapter = get_adapter()
     return adapter.create_issue(
         repo_full_name=repo_full_name,
-        title=_format_title(finding),
+        title=title,
         body=_format_body(finding, repo_full_name, commit_sha),
         labels=_format_labels(finding),
     )
