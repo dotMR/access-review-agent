@@ -62,6 +62,12 @@ class GitHubAdapter(Protocol):
         self, repo_full_name: str, path: str, content: str, message: str
     ) -> ReportCommitResult: ...
 
+    def close_issue(self, repo_full_name: str, issue_number: int) -> None: ...
+
+    def apply_label(self, repo_full_name: str, issue_number: int, label: str) -> None: ...
+
+    def add_comment(self, repo_full_name: str, issue_number: int, body: str) -> None: ...
+
 
 class DryRunAdapter:
     """Logs what would happen. Never touches the network."""
@@ -85,6 +91,15 @@ class DryRunAdapter:
         print(f"  Message: {message}")
         print(f"  Content ({len(content)} chars):\n{preview}")
         return ReportCommitResult(path=path, commit_sha=None, html_url=None, dry_run=True)
+
+    def close_issue(self, repo_full_name: str, issue_number: int) -> None:
+        print(f"[DRY RUN] Would close Issue #{issue_number} on {repo_full_name}")
+
+    def apply_label(self, repo_full_name: str, issue_number: int, label: str) -> None:
+        print(f"[DRY RUN] Would apply label {label!r} to Issue #{issue_number} on {repo_full_name}")
+
+    def add_comment(self, repo_full_name: str, issue_number: int, body: str) -> None:
+        print(f"[DRY RUN] Would comment on Issue #{issue_number} on {repo_full_name}:\n{body}")
 
 
 class RealAdapter:
@@ -126,6 +141,18 @@ class RealAdapter:
             html_url=result["content"].html_url,
             dry_run=False,
         )
+
+    def close_issue(self, repo_full_name: str, issue_number: int) -> None:
+        repo = self._client.get_repo(repo_full_name)
+        repo.get_issue(issue_number).edit(state="closed")
+
+    def apply_label(self, repo_full_name: str, issue_number: int, label: str) -> None:
+        repo = self._client.get_repo(repo_full_name)
+        repo.get_issue(issue_number).add_to_labels(label)
+
+    def add_comment(self, repo_full_name: str, issue_number: int, body: str) -> None:
+        repo = self._client.get_repo(repo_full_name)
+        repo.get_issue(issue_number).create_comment(body)
 
 
 def _resolve_token() -> str | None:

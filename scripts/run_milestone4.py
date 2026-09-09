@@ -122,7 +122,7 @@ def run_orchestrator_check() -> bool:
 
     opened_set = set()
     total_rejected = 0
-    for system_name, summary in results.items():
+    for system_name, summary in results["systems"].items():
         for issue_result in summary["opened"]:
             # Recover (category, system_name, employee_id) from the title/labels
             # the same way an external reviewer would - not from internal state.

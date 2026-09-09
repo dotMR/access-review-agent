@@ -49,13 +49,16 @@ def case_25_single_system_scope() -> bool:
             print(f"[FAIL] case-25-single-system-scope — run failed with only AWS's file present: {e}")
             return False
 
-    if set(results.keys()) != {"aws"}:
-        print(f"[FAIL] case-25-single-system-scope — orchestrator touched {set(results.keys())}, expected {{'aws'}}")
+    if set(results["systems"].keys()) != {"aws"}:
+        print(
+            f"[FAIL] case-25-single-system-scope — orchestrator touched "
+            f"{set(results['systems'].keys())}, expected {{'aws'}}"
+        )
         return False
 
     opened = {
         (next(l for l in r.labels if l != "aws"), "aws", r.body.split("employee_id=")[1].rstrip("`"))
-        for r in results["aws"]["opened"]
+        for r in results["systems"]["aws"]["opened"]
     }
     expected = {("orphaned", "aws", "E9001")}
     if opened != expected:
@@ -90,7 +93,7 @@ def _all_systems_fan_out(case_name: str, changed_files: list[str]) -> bool:
             system_name,
             r.body.split("employee_id=")[1].rstrip("`"),
         )
-        for system_name, summary in results.items()
+        for system_name, summary in results["systems"].items()
         for r in summary["opened"]
     }
     if opened != expected_set:

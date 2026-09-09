@@ -102,10 +102,14 @@ Narrative synthesis needs no file-reading tools, unlike Identity resolution — 
 
 ## Milestone 9 — Escalation and Accepted Risk lifecycle
 
-`apply_label`/`add_comment` mechanics for Escalation (no assignee — ADR-0005), fires-once behavior, `accepted-risk` closing the Issue.
+Adds `close_issue`/`apply_label`/`add_comment` to the `GitHubAdapter` (same dry-run/real pattern as `create_issue`/`commit_report`) and a new `lifecycle.py`: `close_accepted_risk_issues` and `escalate_overdue_issues`, both operating on already-open Issues via `list_issues` — re-checking existing state, not detecting anything new.
+
+**Real design call, confirmed explicitly**: lifecycle checking runs unconditionally over every open Issue on every trigger (push or monthly), never scoped to just the systems a given push touched. Escalation's same-day SLA timing shouldn't depend on which system happened to get a commit today, and this cross-system bookkeeping is exactly what the main agent — the sole holder of GitHub write tools (SPEC.md §3) — is for, not something a per-system detection unit does. Wired into `orchestrator.py`'s `run_full_reconciliation`, which changed its return shape to `{"systems": {...}, "lifecycle": {...}}` (previously a flat per-system dict) to keep the two clearly separate rather than risk a caller iterating both shapes as if they were the same — this broke and was fixed in the three existing callers (`run_production.py`, `run_milestone4.py`, `run_milestone5.py`) as part of this milestone, a real regression caught by the existing eval suite, not found in review.
+
+Verified for real against the scratch repo, not just synthetically: reopened an already-day-old closed Issue, confirmed `escalate_overdue_issues` applied the `escalated` label and a comment stating the missed SLA with no assignee (case 34), confirmed a second run made no further changes (case 35, fires-once), then applied `accepted-risk` and confirmed `close_accepted_risk_issues` closed it while preserving all other labels (case 36) — before building the permanent, credential-free eval fixtures using synthetic `IssueInfo` objects.
 
 **Proves:** the Issue lifecycle semantics that took real back-and-forth to resolve are actually implemented as decided, not just documented.
-**Gate:** Tier 3 cases 34–36 pass.
+**Gate:** Tier 3 cases 34–36 pass, plus a boundary case (an Issue opened today, same-day SLA not yet missed, must not escalate — the `>`, not `>=`, discipline used throughout this project). All free/local (`scripts/run_milestone9.py`, no model call, no network), wired into `eval.yml`.
 
 ## Milestone 10 — Monthly Operational Flags
 

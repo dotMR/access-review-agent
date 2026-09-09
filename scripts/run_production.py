@@ -45,13 +45,19 @@ def main() -> None:
 
     results = run_full_reconciliation(data_dir, repo_full_name, systems=dispatch, commit_sha=commit_sha)
 
-    for system_name, summary in results.items():
+    for system_name, summary in results["systems"].items():
         print(
             f"{system_name}: {summary['detected']} detected, "
             f"{len(summary['opened'])} opened, {len(summary['rejected'])} rejected"
         )
         for rejected in summary["rejected"]:
             print(f"  REJECTED (ungrounded): {rejected['reason']}")
+
+    lifecycle = results["lifecycle"]
+    print(
+        f"lifecycle: {len(lifecycle['escalated'])} escalated, "
+        f"{len(lifecycle['accepted_risk_closed'])} accepted-risk closed"
+    )
 
 
 if __name__ == "__main__":

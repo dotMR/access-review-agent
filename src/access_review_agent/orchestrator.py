@@ -22,6 +22,7 @@ from typing import Any
 from access_review_agent.github.adapter import IssueResult, ReportCommitResult, get_adapter, list_issues
 from access_review_agent.github.issues import open_issue
 from access_review_agent.grounding import GroundingError
+from access_review_agent.lifecycle import close_accepted_risk_issues, escalate_overdue_issues
 from access_review_agent.narrative import synthesize_narrative
 from access_review_agent.reports import SYSTEM_LABEL, SYSTEM_ORDER, build_aggregate_report, build_per_system_report
 from access_review_agent.risk_assessment import build_risk_assessment_entries
@@ -40,10 +41,21 @@ def run_full_reconciliation(
     `commit_sha`, when given, upgrades every Issue's Source record
     citation to a clickable GitHub blob permalink (Milestone 5) - passed
     straight through to open_issue.
-    Returns a per-system summary (findings detected, Issues opened,
-    findings rejected by the grounding gate) for inspection.
+
+    Also runs Escalation/Accepted-Risk lifecycle checks (Milestone 9,
+    ADR-0005) over EVERY currently-open Issue, unconditionally - never
+    scoped to just `systems`. Escalation's same-day SLA timing shouldn't
+    depend on which system happened to get a commit today, and this
+    cross-system bookkeeping is what the main agent (the sole holder of
+    GitHub write tools) is for, not something detection units do.
+
+    Returns {"systems": {<system_name>: {detected, opened, rejected}},
+    "lifecycle": {accepted_risk_closed, escalated}} - two clearly
+    separate shapes under their own keys, not flattened together, so a
+    caller iterating per-system results can't accidentally trip over the
+    differently-shaped lifecycle entry.
     """
-    results: dict[str, Any] = {}
+    systems_results: dict[str, Any] = {}
     for system_name in (systems if systems is not None else SYSTEMS):
         unit = SystemDetectionUnit(system_name, data_dir)
         findings = unit.detect_all()
@@ -56,12 +68,19 @@ def run_full_reconciliation(
             except GroundingError as e:
                 rejected.append({"finding": finding, "reason": str(e)})
 
-        results[system_name] = {
+        systems_results[system_name] = {
             "detected": len(findings),
             "opened": opened,
             "rejected": rejected,
         }
-    return results
+
+    adapter = get_adapter()
+    all_issues = list_issues(repo_full_name)
+    lifecycle_results = {
+        "accepted_risk_closed": close_accepted_risk_issues(adapter, repo_full_name, all_issues),
+        "escalated": escalate_overdue_issues(adapter, repo_full_name, all_issues),
+    }
+    return {"systems": systems_results, "lifecycle": lifecycle_results}
 
 
 _PERIOD_RE = re.compile(r"^\d{4}-Q[1-4]$")
