@@ -16,7 +16,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Protocol
 
-from github import Auth, Github
+from github import Auth, Github, UnknownObjectException
 
 
 @dataclass
@@ -29,10 +29,38 @@ class IssueResult:
     dry_run: bool
 
 
+@dataclass
+class ReportCommitResult:
+    path: str
+    commit_sha: str | None  # None in dry-run mode
+    html_url: str | None
+    dry_run: bool
+
+
+@dataclass
+class IssueInfo:
+    """A live GitHub Issue's current state - read-only summary used by
+    report rendering (resolution-status rollups, Escalations, etc.).
+    """
+
+    number: int
+    title: str
+    body: str
+    state: str  # "open" | "closed"
+    labels: list[str]
+    created_at: str
+    closed_at: str | None
+    html_url: str
+
+
 class GitHubAdapter(Protocol):
     def create_issue(
         self, repo_full_name: str, title: str, body: str, labels: list[str]
     ) -> IssueResult: ...
+
+    def commit_report(
+        self, repo_full_name: str, path: str, content: str, message: str
+    ) -> ReportCommitResult: ...
 
 
 class DryRunAdapter:
@@ -48,6 +76,15 @@ class DryRunAdapter:
         return IssueResult(
             number=None, html_url=None, title=title, body=body, labels=labels, dry_run=True
         )
+
+    def commit_report(
+        self, repo_full_name: str, path: str, content: str, message: str
+    ) -> ReportCommitResult:
+        preview = content[:500] + ("..." if len(content) > 500 else "")
+        print(f"[DRY RUN] Would commit report to {repo_full_name}:{path}")
+        print(f"  Message: {message}")
+        print(f"  Content ({len(content)} chars):\n{preview}")
+        return ReportCommitResult(path=path, commit_sha=None, html_url=None, dry_run=True)
 
 
 class RealAdapter:
@@ -70,6 +107,26 @@ class RealAdapter:
             dry_run=False,
         )
 
+    def commit_report(
+        self, repo_full_name: str, path: str, content: str, message: str
+    ) -> ReportCommitResult:
+        """Create or update one file via the Contents API - no PR, no
+        review gate, per SPEC.md §3. Same adapter/token as create_issue,
+        rather than a second write path through local git commands.
+        """
+        repo = self._client.get_repo(repo_full_name)
+        try:
+            existing = repo.get_contents(path)
+            result = repo.update_file(path, message, content, existing.sha)
+        except UnknownObjectException:
+            result = repo.create_file(path, message, content)
+        return ReportCommitResult(
+            path=path,
+            commit_sha=result["commit"].sha,
+            html_url=result["content"].html_url,
+            dry_run=False,
+        )
+
 
 def _resolve_token() -> str | None:
     """GITHUB_TOKEN env var first (works locally via .env or a GitHub
@@ -87,6 +144,32 @@ def _resolve_token() -> str | None:
         return result.stdout.strip() or None
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return None
+
+
+def list_issues(repo_full_name: str, label: str | None = None) -> list[IssueInfo]:
+    """Live GitHub read - not gated by GITHUB_WRITE_MODE, since reading
+    has no side effect to guard against, unlike create_issue/commit_report.
+    Always makes a real API call (there's no "dry run" of a read).
+    """
+    token = _resolve_token()
+    client = Github(auth=Auth.Token(token)) if token else Github()
+    repo = client.get_repo(repo_full_name)
+    kwargs = {"state": "all"}
+    if label:
+        kwargs["labels"] = [label]
+    return [
+        IssueInfo(
+            number=issue.number,
+            title=issue.title,
+            body=issue.body or "",
+            state=issue.state,
+            labels=[l.name for l in issue.labels],
+            created_at=issue.created_at.isoformat(),
+            closed_at=issue.closed_at.isoformat() if issue.closed_at else None,
+            html_url=issue.html_url,
+        )
+        for issue in repo.get_issues(**kwargs)
+    ]
 
 
 def get_adapter() -> GitHubAdapter:

@@ -70,10 +70,18 @@ Split deliberately across where reasoning is and isn't needed: `find_unresolved_
 
 ## Milestone 7 — Reports: per-system and aggregate, `commit_report`
 
-Build `commit_report`, wire the two evidentiary report templates, add the quarterly-audit trigger (schedule/`workflow_dispatch`).
+Built `commit_report` and the first read tool, `list_issues` (`github/adapter.py`) — the first place the agent reads its own prior output back, not just writes. `commit_report` reuses the same `GitHubAdapter`/token/dry-run pattern as `open_issue` (create-or-update via the Contents API, not a second write path through local git commands); `list_issues` always makes a real read (no dry-run concept for something with no side effect to guard against).
+
+Report rendering (`reports.py`) parses each Issue's title/body back into fields rather than re-running detection — by the time the quarterly trigger fires, push-triggered runs have already opened every Issue for the quarter (SPEC.md §2); the report is a rollup of that state, not a fresh pass. This is safe specifically because Issue format (SPEC.md §4) was deliberately designed to mirror the report table's own columns ("reuses each category's own report-row columns... rather than a separate, invented convention") — parsing our own generated format, not arbitrary external text. A row missing an expected field (an older Issue whose body predates a `_format_body` change) renders "N/A" for that cell rather than crashing the whole report — found via a real older test Issue during manual verification, not designed in speculatively.
+
+The aggregate template's Risk Assessment and Escalations sections depend on Milestones 8 and 9, which don't exist yet — rendered as an explicit "not yet implemented — lands in Milestone N" placeholder rather than an empty table (which would falsely imply the computation ran and found nothing) or a silent omission.
+
+Manual verification (this milestone's actual Gate) surfaced one real gap: Milestone 6's `_format_body` never wrote a "Date detected" line for `identity-resolution`, even though the finding data has it and the per-system template expects it — fixed in `github/issues.py`.
+
+`.github/workflows/quarterly-audit.yml` adds `workflow_dispatch` (manual period input) and `schedule` (quarterly cadence) triggers, `GITHUB_WRITE_MODE` unset by default, same reasoning as `production.yml`.
 
 **Proves:** committed-file output works, not just Issue-based output.
-**Gate:** manual inspection against the templates — reports are downstream rendering of already-gated Issue data, so no new eval cases are needed here specifically.
+**Gate:** manual inspection against the templates — reports are downstream rendering of already-gated Issue data, so no new eval cases are needed here specifically. Verified against real committed Issues on the scratch repo spanning all three states (open, remediated, accepted-risk) and five categories; both `commit_report`'s create and update paths confirmed with real commit SHAs.
 
 ## Milestone 8 — Risk Assessment
 

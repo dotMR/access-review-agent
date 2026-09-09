@@ -89,6 +89,7 @@ def _format_body(finding: dict[str, Any], repo_full_name: str, commit_sha: str |
                 f"{_as_literal(change['old_role'])} → {_as_literal(change['new_role'])}"
             )
     elif category == "identity-resolution":
+        lines.append(f"**Date detected:** {finding['date_detected']}")
         lines.append(f"**Resolution outcome:** {_as_literal(finding['resolution_outcome'])}")
         lines.append(f"**Evidence:** {_as_literal(finding['evidence'])}")
         if finding.get("claimed_owner_employee_id"):
