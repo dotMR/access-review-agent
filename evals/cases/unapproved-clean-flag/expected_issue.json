@@ -3,7 +3,7 @@
   "title": "Unapproved access — Luis Ferreira (AWS)",
   "labels": ["unapproved", "aws"],
   "body_must_contain": [
-    "**Access detail:** write access to aws",
+    "**Access detail:** `write` access to aws",
     "**Expected per policy:** A recorded approval (auto or Asset Owner) on file",
     "**Date granted:** 2024-01-15",
     "**Approved by:** none on file",

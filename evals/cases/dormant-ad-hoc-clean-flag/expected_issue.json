@@ -3,7 +3,7 @@
   "title": "Dormant ad-hoc access — Renata Silva (AWS)",
   "labels": ["dormant-ad-hoc", "aws"],
   "body_must_contain": [
-    "**Access detail:** read access to aws",
+    "**Access detail:** `read` access to aws",
     "**Expected per policy:** Role baseline is 'none'; ad-hoc grant unused > 180 consecutive days",
     "**Last used:** 2026-03-07",
     "**Days dormant:** 185",

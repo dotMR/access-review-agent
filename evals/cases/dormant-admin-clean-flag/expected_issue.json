@@ -3,7 +3,7 @@
   "title": "Dormant admin-level access — Priya Anand (AWS)",
   "labels": ["dormant-admin", "aws"],
   "body_must_contain": [
-    "**Access detail:** admin access to aws",
+    "**Access detail:** `admin` access to aws",
     "**Expected per policy:** Revoke if unused > 90 consecutive days",
     "**Last used:** 2026-06-05",
     "**Days dormant:** 95",
