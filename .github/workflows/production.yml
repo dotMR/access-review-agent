@@ -29,6 +29,19 @@ permissions:
   issues: write
   contents: read
 
+# Serialize runs rather than letting them overlap (Milestone 9): the
+# Escalation/Accepted-Risk lifecycle check reads a snapshot of ALL open
+# Issues and acts on it, unconditionally, on every run - two overlapping
+# runs could both see the same Issue as "not yet escalated" and both post
+# an escalation comment (GitHub's label API is idempotent, so no
+# duplicate label, but add_comment isn't). cancel-in-progress: false
+# queues a run behind whatever's already in flight rather than cancelling
+# it - a cancelled mid-run could leave writes half-done, worse than
+# waiting a little longer for a queued one.
+concurrency:
+  group: production-review
+  cancel-in-progress: false
+
 jobs:
   review:
     runs-on: ubuntu-latest
