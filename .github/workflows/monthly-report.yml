@@ -1,0 +1,83 @@
+name: Monthly Operational Flags
+
+# Full reconciliation across all five systems every month (SPEC.md §2,
+# ADR-0003) - real detection, the same mechanism as a push-triggered run,
+# not just a list_issues read, so a system with no recent commits still
+# gets a fresh look. Then commits one report per system listing every
+# currently-open Finding. Informational only: no sign-off, no SLA,
+# doesn't gate Escalation - though the reconciliation call this workflow
+# makes still runs Escalation/Accepted-Risk lifecycle checks as always
+# (Milestone 9), independent of this report.
+#
+# GITHUB_WRITE_MODE stays unset here (dry-run, ADR-0007's default) - same
+# reasoning as production.yml/quarterly-audit.yml: no live data yet,
+# going live is a deliberate later decision.
+on:
+  workflow_dispatch:
+    inputs:
+      period:
+        description: "Reporting period, e.g. 2026-02"
+        required: true
+        type: string
+  schedule:
+    # 00:00 UTC on the 1st of every month, matching SPEC.md §2's
+    # monthly-summary cadence. Inert today (dry-run, no live data) - the
+    # Determine period step computes the just-ended month for this
+    # trigger, since there's no workflow_dispatch input to read from.
+    - cron: "0 0 1 * *"
+
+permissions:
+  issues: write
+  contents: read
+
+# Same shared group as production.yml, and for the same reason (Milestone
+# 9/10): both call run_full_reconciliation with Escalation/Accepted-Risk
+# lifecycle checks, which must never run concurrently with each other.
+concurrency:
+  group: main-agent-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  monthly-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Determine period
+        id: period
+        # inputs.period is untrusted, free-form text - passed through an
+        # env var rather than spliced directly into the shell script (the
+        # classic GitHub Actions script-injection pattern), same fix as
+        # quarterly-audit.yml's own Determine period step.
+        env:
+          INPUT_PERIOD: ${{ inputs.period }}
+        run: |
+          if [ -n "$INPUT_PERIOD" ]; then
+            if ! [[ "$INPUT_PERIOD" =~ ^[0-9]{4}-(0[1-9]|1[0-2])$ ]]; then
+              echo "::error::period must match YYYY-MM (e.g. 2026-02), got: $INPUT_PERIOD"
+              exit 1
+            fi
+            echo "period=$INPUT_PERIOD" >> "$GITHUB_OUTPUT"
+          else
+            python3 -c "
+          from datetime import date
+          today = date.today()
+          year, month = today.year, today.month - 1
+          if month == 0:
+              year, month = year - 1, 12
+          print(f'period={year}-{month:02d}')
+          " >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run full reconciliation and commit monthly reports
+        env:
+          PERIOD: ${{ steps.period.outputs.period }}
+        run: uv run python scripts/run_monthly_reports.py

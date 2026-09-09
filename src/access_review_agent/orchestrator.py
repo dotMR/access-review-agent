@@ -24,7 +24,13 @@ from access_review_agent.github.issues import open_issue
 from access_review_agent.grounding import GroundingError
 from access_review_agent.lifecycle import close_accepted_risk_issues, escalate_overdue_issues
 from access_review_agent.narrative import synthesize_narrative
-from access_review_agent.reports import SYSTEM_LABEL, SYSTEM_ORDER, build_aggregate_report, build_per_system_report
+from access_review_agent.reports import (
+    SYSTEM_LABEL,
+    SYSTEM_ORDER,
+    build_aggregate_report,
+    build_monthly_report,
+    build_per_system_report,
+)
 from access_review_agent.risk_assessment import build_risk_assessment_entries
 from access_review_agent.tools.policy import DEFAULT_ROLE_ACCESS_MAPPING_PATH, read_policy
 from access_review_agent.units import SYSTEMS, SystemDetectionUnit
@@ -94,6 +100,49 @@ def run_full_reconciliation(
             "escalated": escalate_overdue_issues(adapter, repo_full_name, all_issues),
         }
     return {"systems": systems_results, "lifecycle": lifecycle_results}
+
+
+_MONTH_PERIOD_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+
+
+def generate_monthly_reports(
+    data_dir: Path, repo_full_name: str, period: str, commit_sha: str | None = None
+) -> dict[str, ReportCommitResult]:
+    """Monthly Operational Flags (SPEC.md §2/§6, ADR-0003, Milestone 10):
+    the same full-reconciliation mechanism as a push-triggered run — real
+    detection across all five systems, not just a list_issues read - so a
+    system with no recent commits still gets a fresh look. Then commits
+    one report per system listing every currently-open Finding, any
+    category including Orphaned. Informational only: no sign-off, no
+    SLA, doesn't gate Escalation (the reconciliation call above still
+    runs Escalation/Accepted-Risk lifecycle checks as always, per
+    Milestone 9 - that's independent of, and unaffected by, this report).
+
+    `period` (YYYY-MM) becomes part of every committed file's path
+    (`reports/monthly/{period}/...`) - validated strictly before it ever
+    reaches a path, same discipline as generate_quarterly_reports's
+    period validation and for the same reason.
+    """
+    if not _MONTH_PERIOD_RE.match(period):
+        raise ValueError(f"period must match YYYY-MM (e.g. 2026-02), got: {period!r}")
+
+    run_full_reconciliation(data_dir, repo_full_name, systems=None, commit_sha=commit_sha)
+
+    all_issues = list_issues(repo_full_name)
+    generated_at = datetime.now(timezone.utc).isoformat()
+    adapter = get_adapter()
+    results: dict[str, ReportCommitResult] = {}
+
+    for system_name in SYSTEM_ORDER:
+        open_issues = [
+            i for i in all_issues if SYSTEM_LABEL[system_name] in i.labels and i.state == "open"
+        ]
+        content = build_monthly_report(system_name, period, open_issues, generated_at)
+        path = f"reports/monthly/{period}/{system_name}.md"
+        results[system_name] = adapter.commit_report(
+            repo_full_name, path, content, f"Monthly Operational Flags: {system_name}, {period}"
+        )
+    return results
 
 
 _PERIOD_RE = re.compile(r"^\d{4}-Q[1-4]$")

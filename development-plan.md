@@ -113,10 +113,14 @@ Verified for real against the scratch repo, not just synthetically: reopened an 
 
 ## Milestone 10 — Monthly Operational Flags
 
-The monthly trigger, full detection re-run (not just a `list_issues` read — the ADR-0003 revision), `commit_report` to `reports/monthly/`.
+`generate_monthly_reports` (`orchestrator.py`) calls the same `run_full_reconciliation` push-triggered runs use — real detection across all five systems, including Escalation/Accepted-Risk lifecycle checks (Milestone 9) — then commits one `build_monthly_report` (`reports.py`) per system listing every currently-open Finding, any category including Orphaned. `.github/workflows/monthly-report.yml` mirrors `quarterly-audit.yml`'s already-established pattern exactly: `workflow_dispatch` (manual `period` input, passed through `env:` rather than spliced into the shell script — the injection fix from Milestone 7's review, applied from the start this time) plus a monthly `schedule`, `GITHUB_WRITE_MODE` unset by default, and the `period` format validated strictly (`YYYY-MM`) before it ever reaches a path, same discipline as the quarterly period.
+
+**Concurrency, applied proactively this time**: both `production.yml` and `monthly-report.yml` call `run_full_reconciliation` with lifecycle checks, so they now share one `concurrency` group (`main-agent-reconciliation`, renamed from `production-review`) rather than each having its own — the two must never run concurrently with *each other* either, not just with themselves, or the same duplicate-escalation-comment risk Milestone 9's review caught applies across workflows too.
+
+A real gap surfaced while testing case 32: a dry-run `open_issue` call doesn't create a real Issue, so a *separate* `list_issues` read afterward (as `generate_monthly_reports`' own report-building step does) can never see it — that's not a bug, just two different concerns (did detection run vs. does the report reflect live Issue state, the latter already covered by Milestone 7). The eval case tests `run_full_reconciliation`'s own return value directly instead, which is what case 32's claim actually is; `generate_monthly_reports` itself was verified manually against the real scratch repo (all five reports generated correctly, dry-run) before the eval suite was written, matching the same-milestone precedent Milestone 7 set for its own orchestration-level function.
 
 **Proves:** the quiet-system gap is actually closed, not just designed to be.
-**Gate:** Tier 3 cases 32–33 pass.
+**Gate:** Tier 3 cases 32–33 pass, both free/local/credential-free (verified with credentials genuinely mocked absent, not just unset locally — the lesson from Milestone 9's CI regression, applied this time before pushing rather than after). Wired into `eval.yml`.
 
 ## Milestone 11 — Partial failure, Release, publish gate
 
