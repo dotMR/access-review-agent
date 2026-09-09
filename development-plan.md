@@ -85,10 +85,20 @@ Manual verification (this milestone's actual Gate) surfaced one real gap: Milest
 
 ## Milestone 8 — Risk Assessment
 
-Scoring tables (ADR-0002), quarterly-only computation from `list_issues` + `read_prior_report`, narrative synthesis.
+Scoring tables (ADR-0002) and narrative synthesis, deliberately split across two modules matching the deterministic/genuine-synthesis boundary: `risk_assessment.py` (Impact/Likelihood/Risk Rating lookups, `read_prior_report`, quarterly-recurrence counting) and `narrative.py` (the actual reasoning, plus the LLM-as-judge grader — the first of its kind in this project).
+
+`read_prior_report` is a local file read from the repo checkout (SPEC.md §3), not a GitHub API call — it parses a previously-committed report file back into `{category: {issue_numbers}}`, one level up from `grounding.py`/`reports.py`'s own Issue-body parsing but the same underlying trick: Issue format was deliberately designed to mirror report columns, so reading our own prior output back is safe. Recurrence counting walks backward from the current period, capped at 3 (Likelihood only distinguishes 1/2/3+); an entry covering multiple findings takes the max Likelihood and the highest-severity access level for Impact across them.
+
+**Real, explicit design call**: VPN's binary `none`/`granted` access level doesn't map onto the Impact table's `read`/`write`/`admin` axis (that axis predates VPN's own vocabulary — see the earlier `role-access-mapping.yaml` fix). Decided explicitly rather than left implicit: `granted` is treated as write-equivalent, documented in `risk_assessment.py`.
+
+Narrative synthesis needs no file-reading tools, unlike Identity resolution — the facts (Likelihood/Impact/Risk Rating, the specific Issues behind them, each one's own recurrence count) are already computed and handed to the model directly in the prompt. Model: Haiku 4.5 for both the narrator and the LLM-as-judge grader, per the user's explicit empirical call (same approach as Milestone 6) — verified against the eval suite: 5/5 cases passed, **$0.0395** total. The judge was checked for real discrimination, not rubber-stamping, by also grading a deliberately bad narrative (no Issue numbers, uniform treatment recommendation) and confirming it correctly failed both criteria before trusting it against the real narrative.
+
+**A second real, explicit design call, surfaced mid-build**: narrative synthesis is a real Anthropic API call made regardless of `GITHUB_WRITE_MODE` (that flag only ever gated GitHub writes) — and `quarterly-audit.yml`'s `schedule` trigger was already merged and wired for the real quarterly cadence in Milestone 7. Rather than silently let every scheduled run start spending money on narratives, `generate_quarterly_reports` gained its own dedicated gate, `generate_narrative` (env `ENABLE_RISK_ASSESSMENT_NARRATIVE`), independent of `GITHUB_WRITE_MODE` per explicit user decision — exposed only as a `workflow_dispatch` boolean input, never available on the `schedule` trigger, which has no inputs to read from at all. The deterministic Likelihood/Impact/Risk Rating scores are always computed either way; only the narrative text itself is gated, with an explicit placeholder (not a silent gap) when disabled.
+
+`scripts/run_milestone8.py` is deliberately **not** wired into `eval.yml`, same reasoning and same precedent as `run_milestone6.py` (Milestone 6): every run costs real money (narrative generation, then LLM-as-judge grading on top), and wiring it into CI would mean every future PR spends automatically with no human deciding to that time.
 
 **Proves:** the second reasoning capability, and that the deterministic scoring layer (tables) and the genuine-synthesis layer (narrative) are correctly separated.
-**Gate:** Tier 3 cases 29–31 (tables, including non-endpoint cells) pass deterministically; Tier 2 cases 23–24 (narrative) pass via LLM-as-judge.
+**Gate:** Tier 3 cases 29–31 (tables, including non-endpoint cells) pass deterministically; Tier 2 cases 23–24 (narrative) pass via LLM-as-judge. All via `scripts/run_milestone8.py`, run manually, not in CI.
 
 ## Milestone 9 — Escalation and Accepted Risk lifecycle
 

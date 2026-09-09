@@ -11,11 +11,13 @@ table's own columns ("reuses each category's own report-row columns...
 rather than a separate, invented convention") for exactly this reuse, not
 as an ad hoc parsing shortcut.
 
-Risk Assessment and Escalations sections in the aggregate report are
-rendered as explicit "not yet implemented" placeholders, not empty
-tables - those depend on Milestones 8 and 9, which don't exist yet.
-Rendering an empty table would falsely imply the computation ran and
-found nothing; it never ran at all.
+The Escalations section still renders as an explicit "not yet
+implemented" placeholder, not an empty table - it depends on Milestone 9,
+which doesn't exist yet. Rendering an empty table would falsely imply the
+computation ran and found nothing; it never ran at all. Risk Assessment
+(Milestone 8) follows the same discipline for any *caller* that doesn't
+supply `risk_assessment_rows` - the placeholder always describes "not
+provided for this call," never "not built," once the feature exists.
 """
 
 import re
@@ -56,6 +58,10 @@ MODEL_NOTE = (
 )
 
 NOT_YET_IMPLEMENTED = "_Not yet implemented — lands in {milestone}. No rows below are a real computation._"
+RISK_ASSESSMENT_NOT_PROVIDED = (
+    "_No Risk Assessment data provided for this report (risk_assessment_rows was not "
+    "passed to build_aggregate_report). No rows below are a real computation._"
+)
 
 
 class _MissingFieldAsNA(dict):
@@ -68,13 +74,13 @@ class _MissingFieldAsNA(dict):
         return "N/A"
 
 
-def _status(issue: IssueInfo) -> str:
+def status_of(issue: IssueInfo) -> str:
     if issue.state == "open":
         return "Open"
     return "Accepted risk" if "accepted-risk" in issue.labels else "Remediated"
 
 
-def _category_of(issue: IssueInfo) -> str | None:
+def category_of(issue: IssueInfo) -> str | None:
     return next((label for label in issue.labels if label in CATEGORY_DISPLAY), None)
 
 
@@ -115,9 +121,9 @@ def _counts_table(issues: list[IssueInfo], rows: list[tuple[str, str]]) -> list[
     total = {"open": 0, "remediated": 0, "accepted": 0}
     for label, display in rows:
         matching = [i for i in issues if label in i.labels]
-        open_n = sum(1 for i in matching if _status(i) == "Open")
-        remediated_n = sum(1 for i in matching if _status(i) == "Remediated")
-        accepted_n = sum(1 for i in matching if _status(i) == "Accepted risk")
+        open_n = sum(1 for i in matching if status_of(i) == "Open")
+        remediated_n = sum(1 for i in matching if status_of(i) == "Remediated")
+        accepted_n = sum(1 for i in matching if status_of(i) == "Accepted risk")
         total["open"] += open_n
         total["remediated"] += remediated_n
         total["accepted"] += accepted_n
@@ -151,13 +157,13 @@ def _escape_table_cell(value: str) -> str:
 def _finding_rows(issues: list[IssueInfo], category: str) -> list[dict[str, Any]]:
     rows = []
     for issue in issues:
-        if _category_of(issue) != category:
+        if category_of(issue) != category:
             continue
         fields = {k: _escape_table_cell(v) for k, v in parse_issue_body(issue.body).items()}
         rows.append(
             {
                 "identity": _escape_table_cell(parse_issue_title(issue.title)),
-                "status": _status(issue),
+                "status": status_of(issue),
                 "issue_number": issue.number,
                 "issue_url": issue.html_url,
                 **fields,
@@ -282,12 +288,20 @@ def build_aggregate_report(
     data_snapshot_ref: str = "N/A (manual/local run)",
     trend_note: str = "N/A, no prior period",
     reviewer_name: str = "TBD",
+    risk_assessment_rows: list[dict[str, Any]] | None = None,
 ) -> str:
+    """`risk_assessment_rows`, when given, is a list of {category,
+    system_name, likelihood, impact, risk_rating, narrative} dicts
+    (Milestone 8) — one per (category, system) pair with at least one
+    Finding this quarter. None (the default) renders the "not yet
+    implemented" placeholder, matching Milestone 7's behavior for a
+    caller that hasn't computed Risk Assessment at all.
+    """
     all_issues = [i for issues in per_system_issues.values() for i in issues]
     total_findings = len(all_issues)
-    n_remediated = sum(1 for i in all_issues if _status(i) == "Remediated")
-    n_open = sum(1 for i in all_issues if _status(i) == "Open")
-    n_accepted = sum(1 for i in all_issues if _status(i) == "Accepted risk")
+    n_remediated = sum(1 for i in all_issues if status_of(i) == "Remediated")
+    n_open = sum(1 for i in all_issues if status_of(i) == "Open")
+    n_accepted = sum(1 for i in all_issues if status_of(i) == "Accepted risk")
 
     lines = [
         f"# Quarterly Access Review Audit Report — {period}",
@@ -331,9 +345,9 @@ def build_aggregate_report(
     ]
     for system_name in SYSTEM_ORDER:
         issues = per_system_issues.get(system_name, [])
-        open_n = sum(1 for i in issues if _status(i) == "Open")
-        remediated_n = sum(1 for i in issues if _status(i) == "Remediated")
-        accepted_n = sum(1 for i in issues if _status(i) == "Accepted risk")
+        open_n = sum(1 for i in issues if status_of(i) == "Open")
+        remediated_n = sum(1 for i in issues if status_of(i) == "Remediated")
+        accepted_n = sum(1 for i in issues if status_of(i) == "Accepted risk")
         link = f"[{system_name.replace('_', '-')}.md](./{system_name.replace('_', '-')}.md)"
         lines.append(
             f"| {SYSTEM_DISPLAY[system_name]} | {open_n} | {remediated_n} | {accepted_n} | "
@@ -353,10 +367,21 @@ def build_aggregate_report(
         "",
         "## Risk Assessment",
         "",
-        NOT_YET_IMPLEMENTED.format(milestone="Milestone 8"),
-        "",
+    ]
+    if risk_assessment_rows is None:
+        lines += [RISK_ASSESSMENT_NOT_PROVIDED, ""]
+    lines += [
         "| Category | System | Likelihood | Impact | Risk Rating | Narrative & treatment recommendation |",
         "| :-- | :-- | :-- | :-- | :-- | :-- |",
+    ]
+    if risk_assessment_rows:
+        for row in risk_assessment_rows:
+            lines.append(
+                f"| {CATEGORY_DISPLAY[row['category']]} | {SYSTEM_DISPLAY[row['system_name']]} | "
+                f"{row['likelihood']} | {row['impact']} | {row['risk_rating']} | "
+                f"{_escape_table_cell(row['narrative'])} |"
+            )
+    lines += [
         "",
         "## Escalations this period",
         "",

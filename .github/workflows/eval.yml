@@ -58,12 +58,12 @@ jobs:
       - name: Run Milestone 5 eval suite
         run: uv run python scripts/run_milestone5.py
 
-      # Milestone 6 (Identity resolution) is deliberately NOT run here.
-      # It's the first category needing a real Agent SDK call, so unlike
-      # everything above, every run of scripts/run_milestone6.py costs
-      # real money (~$0.10 for its 7 cases). Wiring it in would mean every
-      # future PR touching these paths spends automatically, with no
-      # human deciding to spend it that time - a different cost posture
-      # than the rest of this suite, and one deliberately not taken on by
-      # default. Run it locally/on-demand instead - see development-plan.md's
-      # Milestone 6.
+      # Milestones 6 (Identity resolution) and 8 (Risk Assessment
+      # narrative + LLM-as-judge) are deliberately NOT run here. Both
+      # need a real Agent SDK call, so unlike everything above, every run
+      # of scripts/run_milestone6.py or run_milestone8.py costs real
+      # money. Wiring either in would mean every future PR touching these
+      # paths spends automatically, with no human deciding to spend it
+      # that time - a different cost posture than the rest of this suite,
+      # and one deliberately not taken on by default. Run them locally/
+      # on-demand instead - see development-plan.md's Milestones 6 and 8.

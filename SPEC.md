@@ -4,7 +4,7 @@ This is the settled *what*: data shapes, trigger/dispatch rules, tool registry, 
 
 For *why*, see `iam-review-agent-design.md` (design rationale) and `docs/adr/` (architecturally significant decisions). For vocabulary and actors, see `CONTEXT.md`. For the formal policy this agent enforces, see `access-control-policy.md`.
 
-**Status:** in active development — 7 of 12 milestones built and merged; see `development-plan.md` for progress and the remaining build order.
+**Status:** in active development — 8 of 12 milestones built and merged; see `development-plan.md` for progress and the remaining build order.
 
 ---
 
