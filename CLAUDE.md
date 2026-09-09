@@ -1,3 +1,7 @@
+## Project status
+
+11 of 12 milestones built and merged. See `development-plan.md` for progress and what's left.
+
 ## Agent skills
 
 ### Issue tracker

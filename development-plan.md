@@ -1,5 +1,7 @@
 # Development Plan
 
+**Status:** 11 of 12 milestones built and merged. Milestone 12 (full demo timeline replay) is what's left — see below.
+
 A walking-skeleton build order: every milestone is a working, end-to-end slice — never a component built in isolation and integrated later. Each one names what's built, what it proves, and which `eval-cases.md` cases become a required-passing gate before moving to the next milestone. Small pieces, always testable, always real (even Milestone 1 talks to a real tool, not a mock of the whole system).
 
 **Runtime: Python.** The Claude Agent SDK is officially available for Python and TypeScript only, with symmetric feature coverage (subagents, hooks, MCP, permissions, sessions) — the SDK itself doesn't favor either. Python was chosen for ecosystem fit with this project's actual workload: `csv`/`pandas` for the core reconciliation logic (reading and joining HRIS/access CSVs, anti-joins, threshold comparisons), and mature HTML/Markdown-to-PDF rendering (WeasyPrint, ReportLab) for the aggregate report's PDF export, versus TypeScript's comparatively thin tabular-data tooling and its PDF options mostly routing through a headless browser. GitHub API access uses a third-party library (PyGithub or similar) rather than GitHub's own first-party Octokit, a real but minor trade-off against the ecosystem fit on the other two points.
