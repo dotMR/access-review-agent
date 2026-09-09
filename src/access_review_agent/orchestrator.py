@@ -246,9 +246,25 @@ async def run_full_reconciliation(
     lifecycle_results = None
     if check_lifecycle:
         adapter = get_adapter()
+        # all_issues is a snapshot from before the per-system loop above -
+        # any Issue close_remediated_issues just closed this same run is
+        # still "open" in it. Without filtering those out here,
+        # escalate_overdue_issues (which only reads Issue metadata, never
+        # re-fetches) would apply an escalated label/comment to something
+        # that's already been closed as remediated moments ago in the
+        # very same run - a real, reachable overlap: an Orphaned Issue a
+        # couple of days old, not yet escalated, whose access happens to
+        # get revoked in this same run. close_accepted_risk_issues can't
+        # hit this same overlap - close_remediated_issues unconditionally
+        # skips any accepted-risk-labeled Issue - but filtering here too
+        # is free and keeps this defensive, not order-dependent.
+        remediated_this_run = {
+            number for summary in systems_results.values() for number in summary["remediated_closed"]
+        }
+        remaining_issues = [i for i in all_issues if i.number not in remediated_this_run]
         lifecycle_results = {
-            "accepted_risk_closed": close_accepted_risk_issues(adapter, repo_full_name, all_issues),
-            "escalated": escalate_overdue_issues(adapter, repo_full_name, all_issues),
+            "accepted_risk_closed": close_accepted_risk_issues(adapter, repo_full_name, remaining_issues),
+            "escalated": escalate_overdue_issues(adapter, repo_full_name, remaining_issues),
         }
     return {"systems": systems_results, "lifecycle": lifecycle_results}
 

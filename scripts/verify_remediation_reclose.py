@@ -93,8 +93,64 @@ async def case_remediated_finding_closes() -> bool:
     return not problems
 
 
+async def case_remediated_and_escalation_overlap_handled() -> bool:
+    """Overlap scenario, found during this fix's own security review: an
+    Orphaned Issue, 2 days old, not yet escalated, whose access has ALSO
+    been genuinely revoked (gone from current_findings) in this same run.
+    Must close as remediated and must NOT also receive the escalated
+    label/comment - escalate_overdue_issues reads a snapshot fetched
+    before remediation closing ran, so without filtering it would act on
+    something already closed moments earlier in the very same run.
+    """
+    from datetime import timedelta
+
+    from access_review_agent.github.adapter import IssueInfo
+    from access_review_agent.orchestrator import run_full_reconciliation
+
+    old_orphaned = IssueInfo(
+        number=401,
+        title="Orphaned access — Someone Departed (GitHub)",
+        body=(
+            "**Access detail:** `write` access to github\n\n"
+            "**Expected per policy:** None (terminated 2026-01-01)\n\n"
+            "**Date detected:** 2026-01-01\n\n"
+            "**Time to revoke:** same day as detection\n\n"
+            "**Source record:** `access_github.csv`, row matching `employee_id=E-departed`"
+        ),
+        state="open",
+        labels=["orphaned", "github"],
+        created_at=(datetime.now(timezone.utc) - timedelta(days=2)).isoformat(),
+        closed_at=None,
+        html_url="https://example.com/issues/401",
+    )
+
+    with patch("access_review_agent.orchestrator.list_issues", return_value=[old_orphaned]):
+        results = await run_full_reconciliation(
+            FIXTURE_DIR, SCRATCH_REPO, systems=None, check_lifecycle=True
+        )
+
+    github_result = results["systems"]["github"]
+    problems = []
+    if 401 not in github_result["remediated_closed"]:
+        problems.append(f"expected #401 to close as remediated - got {github_result['remediated_closed']}")
+    if 401 in results["lifecycle"]["escalated"]:
+        problems.append("expected #401 to NOT also be escalated in the same run - it was already closed as remediated")
+
+    status = "PASS" if not problems else "FAIL"
+    print(
+        f"[{status}] remediation-escalation-overlap — an Issue remediated and escalation-eligible "
+        "in the same run closes as remediated, and is not also escalated"
+    )
+    for p in problems:
+        print(f"         {p}")
+    return not problems
+
+
 async def main() -> None:
-    results = [await case_remediated_finding_closes()]
+    results = [
+        await case_remediated_finding_closes(),
+        await case_remediated_and_escalation_overlap_handled(),
+    ]
     total, passed = len(results), sum(results)
     print(f"\n{passed}/{total} cases passed")
     sys.exit(0 if passed == total else 1)
