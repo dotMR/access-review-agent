@@ -28,7 +28,13 @@ on:
 
 permissions:
   issues: write
-  contents: read
+  # generate_monthly_reports commits one report per system (commit_report,
+  # SPEC.md §6) - this needs write, not read. Found and fixed during
+  # Milestone 12's scratch-repo live trial: contents: read never bit
+  # anything before now, since GITHUB_WRITE_MODE has always stayed unset
+  # here (dry-run never calls the real commit API), but it would have
+  # 403'd the moment this workflow first went to real write mode.
+  contents: write
 
 # Same shared group as production.yml, and for the same reason (Milestone
 # 9/10): both call run_full_reconciliation with Escalation/Accepted-Risk
