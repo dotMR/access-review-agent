@@ -422,6 +422,34 @@ def replay(upto: str) -> tuple[State, date]:
     return state, today
 
 
+MARKER_FILE = ".demo-timeline-seed"
+
+
+def check_target_is_safe(target_dir: Path, force: bool) -> None:
+    """Refuse to overwrite a data/ directory this tool didn't create -
+    write_csvs() opens every file in "w" mode (full overwrite) and
+    git_commit() immediately commits, with no confirmation prompt in
+    between. Today that's harmless (this repo has no data/ directory
+    yet - no live data), but a mistyped --target-dir pointed at the real
+    checkout instead of a scratch/demo one would otherwise silently
+    destroy and commit over real access data once production is live.
+    The marker file records that THIS tool already owns target_dir;
+    --force is an explicit, deliberate opt-out, not the default.
+    """
+    if force:
+        return
+    marker = target_dir / MARKER_FILE
+    data_dir = target_dir / "data"
+    if data_dir.exists() and not marker.exists():
+        raise SystemExit(
+            f"Refusing to write: {data_dir} already exists and wasn't created by this "
+            f"tool (no {MARKER_FILE} marker found). If this is genuinely the intended "
+            "demo/scratch repo, pass --force."
+        )
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.touch()
+
+
 def write_csvs(state: State, data_dir: Path) -> None:
     data_dir.mkdir(parents=True, exist_ok=True)
     with (data_dir / "system_hr.csv").open("w", newline="") as f:
@@ -448,6 +476,10 @@ def main() -> None:
     parser.add_argument("--step", help="Apply exactly this step id")
     parser.add_argument("--target-dir", type=Path, help="Demo data repo checkout root")
     parser.add_argument("--dry-run", action="store_true", help="Print what would happen, don't write or commit")
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Skip the check that target-dir's data/ was created by this tool (see check_target_is_safe)",
+    )
     args = parser.parse_args()
 
     if args.list:
@@ -485,6 +517,7 @@ def main() -> None:
             print(f"  {system}: {len(state.access[system])} access record(s)")
         return
 
+    check_target_is_safe(args.target_dir, args.force)
     write_csvs(state, args.target_dir / "data")
     git_commit(args.target_dir, message)
     print(f"Committed: {message}")
