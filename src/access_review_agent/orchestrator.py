@@ -40,7 +40,10 @@ from access_review_agent.reports import (
     build_aggregate_report,
     build_monthly_report,
     build_per_system_report,
+    category_of,
+    source_employee_id,
     summary_counts,
+    system_of,
 )
 from access_review_agent.risk_assessment import build_risk_assessment_entries
 from access_review_agent.tools.policy import DEFAULT_ROLE_ACCESS_MAPPING_PATH, read_policy
@@ -89,11 +92,11 @@ async def run_full_reconciliation(
     every other milestone's detection tests too.
 
     The same list_issues read also powers duplicate-Issue prevention:
-    every currently-open Issue's title is passed to open_issue, which
-    skips creating a new one for any finding whose title already matches
-    (SPEC.md §4's title format is already this system's natural key for
-    "this specific finding"). Found live during Milestone 12's
-    scratch-repo trial, not designed in speculatively: a push touching
+    every currently-open Issue's (category, system_name, employee_id) -
+    its real unique key, not its rendered title, see open_issue's own
+    docstring for why - is passed to open_issue, which skips creating a
+    new one for any finding whose key already matches. Found live during
+    Milestone 12's scratch-repo trial, not designed in speculatively: a push touching
     system_hr.csv/policy-config.yaml/role-access-mapping.yaml fans out to
     all five systems (dispatch.py) and re-detects every already-known,
     still-open finding right along with anything genuinely new: with
@@ -128,9 +131,21 @@ async def run_full_reconciliation(
     lifecycle entry.
     """
     all_issues = list_issues(repo_full_name) if check_lifecycle else None
-    existing_open_titles = (
-        {i.title for i in all_issues if i.state == "open"} if all_issues is not None else None
-    )
+    existing_open_keys = None
+    if all_issues is not None:
+        # (category, system_name, employee_id) - the finding's own real
+        # unique key (open_issue's own docstring explains why not the
+        # rendered title). A malformed/older Issue that doesn't parse
+        # cleanly (no recognized category label, or a body predating
+        # _format_body's Source record line) is simply not included here -
+        # worst case it risks one future duplicate for that one Issue, not
+        # a crash, and every Issue this system itself ever writes always
+        # parses cleanly by construction.
+        existing_open_keys = {
+            (category_of(i), system_of(i), source_employee_id(i))
+            for i in all_issues
+            if i.state == "open" and category_of(i) and system_of(i) and source_employee_id(i)
+        }
 
     systems_results: dict[str, Any] = {}
     for system_name in (systems if systems is not None else SYSTEMS):
@@ -177,7 +192,7 @@ async def run_full_reconciliation(
             try:
                 result = open_issue(
                     finding, repo_full_name, data_dir, commit_sha,
-                    existing_open_titles=existing_open_titles,
+                    existing_open_keys=existing_open_keys,
                 )
             except GroundingError as e:
                 rejected.append({"finding": finding, "reason": str(e)})

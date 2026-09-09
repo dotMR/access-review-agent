@@ -18,6 +18,16 @@ never dry-run-gated - always a real API call per its own docstring) so
 this stays credential-free; create_issue/close_issue/apply_label/
 add_comment all go through the default DryRunAdapter already, no
 mocking needed there.
+
+Keys on (category, system_name, employee_id) - the finding's own real
+unique key, parsed back out of the mocked Issue's Source record line via
+reports.py's source_employee_id() - not the rendered title. Also found
+during the same review: title alone (employee_name, a human display
+name) isn't a safe dedup key, since two different employees could share
+a name and collide on it, silently swallowing a second, genuinely
+distinct finding. Case two proves this directly: an identical title with
+a DIFFERENT employee_id in its Source record must NOT be treated as a
+duplicate.
 """
 
 import sys
@@ -31,23 +41,32 @@ FIXTURE_DIR = Path(__file__).resolve().parent.parent / "evals" / "cases" / "part
 SCRATCH_REPO = "dotMR/access-review-agent-scratch"
 
 
-async def case_duplicate_issue_skipped() -> bool:
+def _mock_issue(number, title, employee_id, labels):
     from access_review_agent.github.adapter import IssueInfo
-    from access_review_agent.orchestrator import run_full_reconciliation
 
-    # Exactly the title _format_title would compute for the fixture's own
-    # GitHub Unapproved finding (Github Employee, E9202) - a prior run's
-    # Issue for the SAME finding, still open, nothing about it changed.
-    already_open = IssueInfo(
-        number=101,
-        title="Unapproved access — Github Employee (GitHub)",
-        body="pre-existing",
+    return IssueInfo(
+        number=number,
+        title=title,
+        body=(
+            "**Access detail:** `write` access to github\n\n"
+            "**Expected per policy:** A recorded approval (auto or Asset Owner) on file\n\n"
+            f"**Source record:** `access_github.csv`, row matching `employee_id={employee_id}`"
+        ),
         state="open",
-        labels=["unapproved", "github"],
+        labels=labels,
         created_at=datetime.now(timezone.utc).isoformat(),
         closed_at=None,
-        html_url="https://example.com/issues/101",
+        html_url=f"https://example.com/issues/{number}",
     )
+
+
+async def case_duplicate_issue_skipped() -> bool:
+    from access_review_agent.orchestrator import run_full_reconciliation
+
+    # Same (category, system, employee_id) as the fixture's own GitHub
+    # Unapproved finding (Github Employee, E9202) - a prior run's Issue
+    # for the SAME finding, still open, nothing about it changed.
+    already_open = _mock_issue(101, "Unapproved access — Github Employee (GitHub)", "E9202", ["unapproved", "github"])
 
     with patch("access_review_agent.orchestrator.list_issues", return_value=[already_open]):
         results = await run_full_reconciliation(
@@ -76,7 +95,7 @@ async def case_duplicate_issue_skipped() -> bool:
 
     status = "PASS" if not problems else "FAIL"
     print(
-        f"[{status}] duplicate-issue-prevention — a finding whose title matches an already-open "
+        f"[{status}] duplicate-issue-prevention — a finding whose key matches an already-open "
         "Issue is skipped, not re-opened, while genuinely new findings still open normally"
     )
     for p in problems:
@@ -84,8 +103,49 @@ async def case_duplicate_issue_skipped() -> bool:
     return not problems
 
 
+async def case_name_collision_not_deduped() -> bool:
+    """The fix keys on employee_id, not the rendered title (employee_name)
+    - proves it directly: an Issue with the IDENTICAL title text but a
+    DIFFERENT employee_id in its own Source record must NOT be treated
+    as the same finding. Title-only matching would have wrongly skipped
+    this and silently swallowed a genuinely distinct violation.
+    """
+    from access_review_agent.orchestrator import run_full_reconciliation
+
+    same_title_different_person = _mock_issue(
+        202, "Unapproved access — Github Employee (GitHub)", "E-someone-else", ["unapproved", "github"]
+    )
+
+    with patch("access_review_agent.orchestrator.list_issues", return_value=[same_title_different_person]):
+        results = await run_full_reconciliation(
+            FIXTURE_DIR, SCRATCH_REPO, systems=None, check_lifecycle=True
+        )
+
+    github_result = results["systems"]["github"]
+    problems = []
+    if len(github_result["opened"]) != 1:
+        problems.append(
+            f"expected the fixture's E9202 finding to open despite the title-alike Issue for a "
+            f"different employee_id - got {len(github_result['opened'])} opened"
+        )
+    if github_result["skipped_existing"]:
+        problems.append(f"expected nothing skipped (different employee_id) - got {github_result['skipped_existing']}")
+
+    status = "PASS" if not problems else "FAIL"
+    print(
+        f"[{status}] duplicate-issue-prevention-employee-id-not-title — an Issue with an "
+        "identical title but a different employee_id is NOT treated as a duplicate"
+    )
+    for p in problems:
+        print(f"         {p}")
+    return not problems
+
+
 async def main() -> None:
-    results = [await case_duplicate_issue_skipped()]
+    results = [
+        await case_duplicate_issue_skipped(),
+        await case_name_collision_not_deduped(),
+    ]
     total, passed = len(results), sum(results)
     print(f"\n{passed}/{total} cases passed")
     sys.exit(0 if passed == total else 1)
