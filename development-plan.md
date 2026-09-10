@@ -1,6 +1,6 @@
 # Development Plan
 
-**Status:** 11 of 12 milestones built and merged. Milestone 12 (full demo timeline replay) is what's left — see below.
+**Status:** v1 complete — all 12 milestones built and merged. See Milestone 12 below for the live-trial story.
 
 A walking-skeleton build order: every milestone is a working, end-to-end slice — never a component built in isolation and integrated later. Each one names what's built, what it proves, and which `eval-cases.md` cases become a required-passing gate before moving on. Small pieces, always testable, always real.
 
@@ -133,10 +133,24 @@ A real gap surfaced testing case 32: a dry-run `open_issue` doesn't create a rea
 
 ## Milestone 12 — Full demo timeline replay
 
-Run `demo-timeline.md`'s actual 14-commit sequence end-to-end against a real (or realistic sandbox) repo, producing the complete three-quarter artifact trail.
+Ran `demo-timeline.md`'s seeding tool and every trigger (`production.yml`, `monthly-report.yml`, `quarterly-audit.yml`) for real against a separate scratch repo (`dotMR/access-review-agent-scratch`) with `GITHUB_WRITE_MODE=real` — the first time any write path, or the human-in-the-loop Release gate, ran against genuine GitHub state instead of the `DryRunAdapter`.
 
-**Proves:** everything holds together as one coherent story, not just as isolated passing tests.
-**Gate:** the resulting Issues, reports, and Releases match `demo-timeline.md`'s narrative beats. This is also the first point real tool-call-count data exists — set the tool-call/iteration cap (`SPEC.md` §3, still unpinned) from this run, closing the last deferred item in the spec.
+**Wiring gaps surfaced immediately.** `run_full_reconciliation` never called `detect_identity_resolution` — every live run silently produced zero Identity resolution findings. `monthly-report.yml` had `contents: read`, which would have 403'd on its first real commit. No eval fixture caught either, since all of them are single-shot checks against fresh data.
+
+**Duplicate-Issue prevention needed building, then fixing twice more.** Re-running detection against unchanged data opened a second Issue for an already-open finding. The fix's own `system_of()` helper then broke the moment an Issue carried a third label (`accepted-risk`), producing a wrong dedup key. And accepted-risk Issues — closed, but still genuinely detected every run — weren't in the dedup set at all, re-surfacing a formally-reviewed finding as new.
+
+**Remediation re-check/auto-close didn't exist.** `SPEC.md` §8 and `iam-review-agent-design.md`'s "Closing the loop" both described it, and `demo-timeline.md`'s own commit 12 depended on it — but Milestone 9 built Escalation and Accepted Risk and never this third mechanic. A still-open Issue whose access had genuinely been revoked just stayed open.
+
+**An EM-style code review**, run deliberately to close out this milestone, found one Blocking gap: no exception handling on the write path (`open_issue`, `close_issue`, `apply_label`, `add_comment`) — a transient GitHub API failure on one finding would have aborted the entire run. Fixed the same way every other failure category already was: isolated per-item, loud, non-fatal. Remaining lower-priority findings are tracked in `tech-debt.md`.
+
+**Three report-rendering bugs surfaced only once real multi-quarter data existed to render.** The aggregate report's Escalations-this-period table was hardcoded to a "not yet implemented" placeholder, months after Milestone 9 actually built Escalation. The Release body's own escalation count used a separate, non-period-aware computation that could — and did — disagree with the report's own table. The Executive Summary's trend line always read "N/A, no prior period," because nothing ever supplied it. Same lesson three times: a field that renders convincingly isn't the same as one that's actually computed.
+
+**A sequencing lesson, not a code bug.** Q1's quarterly-audit trigger fired before `demo-timeline.md`'s own seeding commits were pushed, so Q1's report rolled up pre-existing verification-testing noise instead of the intended narrative. Quarterly reports have no date-scoping by design (correct for real production use, where each period runs once, in sequence) — so that contamination is now permanent across all three published Releases. Regenerating a published report against today's state was tried once, made things worse, and was abandoned: a past report isn't something this system reconstructs. Every mechanism itself is still genuinely proven working end-to-end; only this trial's specific Q1–Q3 story doesn't perfectly match the intended narrative.
+
+**The last deferred spec item closed.** Two live identity-resolution queries both completed in exactly 4 turns — `SPEC.md` §3's tool-call/iteration cap is now pinned at 10 (`ClaudeAgentOptions.max_turns`), enforced in code.
+
+**Proves:** every mechanism this project claims — detection, grounding, Escalation, Accepted Risk, remediation auto-close, the monthly quiet-system catch, Risk Assessment with real narrative synthesis, trend lines, and a human-approved tagged Release — genuinely works against real GitHub state. Ten real defects found this way never showed up in any eval case.
+**Gate:** every fix landed as its own branch → PR → CI-green → merge, each with a permanent regression guard in `eval.yml` (`scripts/verify_*.py`). Three published, internally-consistent quarterly Releases; the demo-data sequencing gap is documented, not concealed.
 
 ---
 

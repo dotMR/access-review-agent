@@ -1,6 +1,6 @@
 ## Project status
 
-11 of 12 milestones built and merged. See `development-plan.md` for progress and what's left.
+All 12 milestones built and merged (v1 complete). See `development-plan.md` for the full build story.
 
 ## Agent skills
 
