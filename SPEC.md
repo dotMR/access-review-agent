@@ -84,7 +84,7 @@ Full detail: ADR-0001. Summary:
 
 No tool anywhere in the registry grants or revokes access. Read-only on HRIS/Access data, write-only to the agent's own outputs (Issues, reports, Releases).
 
-**Tool-call/iteration cap:** not yet pinned — set from real run data once the agent exists (ADR-0001 Consequences).
+**Tool-call/iteration cap:** 10 `query()` turns (`ClaudeAgentOptions.max_turns`), pinned from real run data (ADR-0001 Consequences) — two live identity-resolution queries against real data (GitHub's `svc-cicd-deploy`, VPN's `kjack_vpn`) both completed in exactly 4 turns (2 tool calls + 2 results, matching the 2-tool registry above); 10 leaves headroom for a retry/self-correction cycle without being effectively unbounded. `identity_resolution.py`'s `build_options` is the only Agent SDK call anywhere in the codebase with real tool access — narrative synthesis and the LLM judge (`narrative.py`) pass `allowed_tools=[]` and are pinned to `max_turns=1` instead, since no tool-calling loop is possible for either.
 
 ---
 
@@ -192,7 +192,7 @@ From `iam-review-agent-design.md`'s Guardrails section, restated as commitments:
 - **Human-in-the-loop publish gate** — the quarterly Release (and possibly individual Issues) requires approval before publishing.
 - **Fail-loud completeness** — every report shows every category explicitly, including "No findings." Malformed source data errors visibly rather than producing a quietly incomplete report. Per ADR-0001: a failure is scoped to the affected system — the run still publishes what it has for the other four, with an explicit failed-system line, rather than aborting entirely.
 - **Input safety** — HRIS/access-data fields (name, role, notes) are read as inert data, never as instructions. Proven by eval case 38 (`eval-cases.md`), not just asserted.
-- **Cost/budget control** — a tool-call/iteration cap exists; the number is unpinned until there's real run data (§3).
+- **Cost/budget control** — a tool-call/iteration cap is enforced (`ClaudeAgentOptions.max_turns`) on every Agent SDK call in the codebase, pinned from real run data (§3).
 - **Least-privilege CI credentials** — `GITHUB_TOKEN` explicitly scoped in workflow YAML (`permissions: issues: write, contents: read`), not left at default breadth.
 
 ---
