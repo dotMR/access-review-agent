@@ -36,8 +36,9 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, create_sdk_mcp_server, query
+from claude_agent_sdk import ClaudeAgentOptions, create_sdk_mcp_server
 
+from access_review_agent.agent_sdk import run_query
 from access_review_agent.tools.access_data import (
     make_read_access_data_tool,
     read_and_validate as read_access_data,
@@ -166,21 +167,9 @@ async def _query_resolution(
 ) -> tuple[dict[str, Any], float]:
     """Run one Agent SDK query resolving a single candidate. Returns
     (parsed {outcome, evidence, resolved_employee_id}, cost in USD).
-    Extracts text via ResultMessage.result, never by stringifying raw SDK
-    message objects - see reference/milestone-6-agent-sdk-patterns/
-    README.md for why that silently breaks.
     """
     prompt = f"Resolve the identity of the {system_name} access record with identifier '{identifier}'."
-    result_text: str | None = None
-    cost_usd = 0.0
-    async for message in query(prompt=prompt, options=options):
-        if isinstance(message, ResultMessage):
-            result_text = message.result
-            cost_usd = message.total_cost_usd or 0.0
-
-    if result_text is None:
-        raise RuntimeError("Agent run finished without a ResultMessage")
-
+    result_text, cost_usd = await run_query(prompt, options)
     return extract_json_block(result_text), cost_usd
 
 
