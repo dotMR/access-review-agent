@@ -25,8 +25,9 @@ findings with it; open_issue reuses it unchanged as the write gate.
 
 from datetime import date
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
 
+from access_review_agent.finding import Finding
 from access_review_agent.tools.access_data import read_and_validate as read_access_data
 from access_review_agent.tools.hris import read_and_validate as read_hris
 from access_review_agent.tools.policy import (
@@ -41,7 +42,7 @@ class GroundingError(Exception):
     """Raised when a claimed finding does not hold up against source data."""
 
 
-def _require_date_detected(finding: dict[str, Any]) -> date:
+def _require_date_detected(finding: Finding) -> date:
     date_detected = finding.get("date_detected")
     if not date_detected:
         raise GroundingError("Finding missing date_detected — can't re-derive its threshold check")
@@ -49,7 +50,7 @@ def _require_date_detected(finding: dict[str, Any]) -> date:
 
 
 def _validate_orphaned(
-    finding: dict[str, Any], access_row: dict, hris_row: dict | None, hris_rows: list[dict]
+    finding: Finding, access_row: dict, hris_row: dict | None, hris_rows: list[dict]
 ) -> None:
     if access_row["status"] != "active":
         raise GroundingError(
@@ -66,7 +67,7 @@ def _validate_orphaned(
 
 
 def _validate_dormant_admin(
-    finding: dict[str, Any], access_row: dict, hris_row: dict | None, hris_rows: list[dict]
+    finding: Finding, access_row: dict, hris_row: dict | None, hris_rows: list[dict]
 ) -> None:
     if access_row["access_level"] != "admin":
         raise GroundingError(f"Access record has access_level={access_row['access_level']!r}, not 'admin'")
@@ -86,7 +87,7 @@ def _validate_dormant_admin(
 
 
 def _validate_dormant_ad_hoc(
-    finding: dict[str, Any], access_row: dict, hris_row: dict | None, hris_rows: list[dict]
+    finding: Finding, access_row: dict, hris_row: dict | None, hris_rows: list[dict]
 ) -> None:
     if access_row["status"] != "active":
         raise GroundingError(f"Access record has status={access_row['status']!r}, not 'active'")
@@ -113,7 +114,7 @@ def _validate_dormant_ad_hoc(
 
 
 def _validate_unapproved(
-    finding: dict[str, Any], access_row: dict, hris_row: dict | None, hris_rows: list[dict]
+    finding: Finding, access_row: dict, hris_row: dict | None, hris_rows: list[dict]
 ) -> None:
     if access_row["status"] != "active":
         raise GroundingError(f"Access record has status={access_row['status']!r}, not 'active'")
@@ -124,7 +125,7 @@ def _validate_unapproved(
 
 
 def _validate_drift(
-    finding: dict[str, Any], access_row: dict, hris_row: dict | None, hris_rows: list[dict]
+    finding: Finding, access_row: dict, hris_row: dict | None, hris_rows: list[dict]
 ) -> None:
     import json
 
@@ -145,7 +146,7 @@ def _validate_drift(
 
 
 def _validate_identity_resolution(
-    finding: dict[str, Any], access_row: dict, hris_row: dict | None, hris_rows: list[dict]
+    finding: Finding, access_row: dict, hris_row: dict | None, hris_rows: list[dict]
 ) -> None:
     if access_row["status"] != "active":
         raise GroundingError(f"Access record has status={access_row['status']!r}, not 'active'")
@@ -180,7 +181,7 @@ def _validate_identity_resolution(
     # not something grounding can re-check against source data.
 
 
-_VALIDATORS: dict[str, Callable[[dict[str, Any], dict, dict | None, list[dict]], None]] = {
+_VALIDATORS: dict[str, Callable[[Finding, dict, dict | None, list[dict]], None]] = {
     "orphaned": _validate_orphaned,
     "dormant-admin": _validate_dormant_admin,
     "dormant-ad-hoc": _validate_dormant_ad_hoc,
@@ -190,7 +191,7 @@ _VALIDATORS: dict[str, Callable[[dict[str, Any], dict, dict | None, list[dict]],
 }
 
 
-def validate_finding(finding: dict[str, Any], data_dir: Path) -> None:
+def validate_finding(finding: Finding, data_dir: Path) -> None:
     """Raise GroundingError if `finding` isn't actually supported by the
     source data in data_dir. Returns None (no exception) if grounded.
     """

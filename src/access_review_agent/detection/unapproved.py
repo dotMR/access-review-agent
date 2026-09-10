@@ -12,6 +12,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from access_review_agent.finding import Finding
 from access_review_agent.tools.access_data import read_and_validate as read_access_data
 from access_review_agent.tools.hris import read_and_validate as read_hris
 
@@ -27,7 +28,7 @@ def detect_unapproved(data_dir: Path, system_name: str = "aws") -> dict[str, Any
     hris_by_id = {r["employee_id"]: r for r in hris_rows}
     today = date.today().isoformat()
 
-    findings = [
+    findings: list[Finding] = [
         {
             "category": "unapproved",
             "system_name": system_name,

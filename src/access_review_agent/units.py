@@ -19,13 +19,13 @@ orchestrator (the main agent, orchestrator.py) holds open_issue.
 """
 
 from pathlib import Path
-from typing import Any
 
 from access_review_agent.detection.dormant_ad_hoc import detect_dormant_ad_hoc
 from access_review_agent.detection.dormant_admin import detect_dormant_admin
 from access_review_agent.detection.drift import detect_drift
 from access_review_agent.detection.orphaned import detect_orphaned
 from access_review_agent.detection.unapproved import detect_unapproved
+from access_review_agent.finding import Finding
 
 SYSTEMS = ("aws", "github", "salesforce", "finance_erp", "vpn")
 
@@ -45,7 +45,7 @@ class SystemDetectionUnit:
     def system_name(self) -> str:
         return self._system_name
 
-    def detect_all(self) -> list[dict[str, Any]]:
+    def detect_all(self) -> list[Finding]:
         """Run every Tier 1 (deterministic) category for this unit's own
         system only, synchronously - Identity resolution (Milestone 6,
         the one v1 Core category needing a real Agent SDK call) is
@@ -55,7 +55,7 @@ class SystemDetectionUnit:
         Python - ADR-0006's Tier 1/Tier 2 split point, drawn at the
         orchestrator layer rather than inside every unit.
         """
-        findings: list[dict[str, Any]] = []
+        findings: list[Finding] = []
         findings += detect_orphaned(self._data_dir, self._system_name)["findings"]
         findings += detect_dormant_admin(self._data_dir, self._system_name)["findings"]
         findings += detect_dormant_ad_hoc(self._data_dir, self._system_name)["findings"]

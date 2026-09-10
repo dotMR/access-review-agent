@@ -19,6 +19,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from access_review_agent.finding import Finding
 from access_review_agent.tools.access_data import read_and_validate as read_access_data
 from access_review_agent.tools.hris import read_and_validate as read_hris
 from access_review_agent.tools.policy import (
@@ -44,7 +45,7 @@ def detect_drift(
     hris_by_id = {r["employee_id"]: r for r in hris_rows}
     today = date.today().isoformat()
 
-    findings = []
+    findings: list[Finding] = []
     for row in access_rows:
         if row["status"] != "active" or row["employee_id"] not in hris_by_id:
             continue

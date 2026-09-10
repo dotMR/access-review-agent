@@ -39,6 +39,7 @@ from typing import Any
 from claude_agent_sdk import ClaudeAgentOptions, create_sdk_mcp_server
 
 from access_review_agent.agent_sdk import run_query
+from access_review_agent.finding import Finding
 from access_review_agent.tools.access_data import (
     make_read_access_data_tool,
     read_and_validate as read_access_data,
@@ -175,13 +176,13 @@ async def _query_resolution(
 
 def _build_finding(
     candidate: dict[str, str], system_name: str, resolution: dict[str, Any]
-) -> dict[str, Any]:
-    """Construct the Finding dict for an unresolved/stale-ownership
-    outcome. Every field except resolution_outcome/evidence/
+) -> Finding:
+    """Construct the Finding for an unresolved/stale-ownership outcome.
+    Every field except resolution_outcome/evidence/
     claimed_owner_employee_id is already known from the candidate record
     itself - Python owns this construction, not the model.
     """
-    finding = {
+    finding: Finding = {
         "category": "identity-resolution",
         "system_name": system_name,
         "employee_id": candidate["employee_id"],
@@ -202,7 +203,7 @@ def _build_finding(
 
 async def resolve_identity(
     options: ClaudeAgentOptions, system_name: str, candidate: dict[str, str]
-) -> tuple[dict[str, Any] | None, float]:
+) -> tuple[Finding | None, float]:
     """Resolve one candidate. Returns (Finding or None, cost in USD) -
     None for the two outcomes that produce no Finding (resolved-
     individual, documented-exception).
@@ -226,7 +227,7 @@ async def detect_identity_resolution(data_dir: Path, system_name: str = "vpn") -
         return {"findings": [], "cost_usd": 0.0}
 
     options = build_options(system_name, data_dir)
-    findings: list[dict[str, Any]] = []
+    findings: list[Finding] = []
     total_cost = 0.0
     for candidate in candidates:
         finding, cost = await resolve_identity(options, system_name, candidate)
