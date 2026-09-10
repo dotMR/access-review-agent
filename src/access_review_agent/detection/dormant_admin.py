@@ -9,6 +9,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from access_review_agent.finding import Finding
 from access_review_agent.tools.access_data import read_and_validate as read_access_data
 from access_review_agent.tools.hris import read_and_validate as read_hris
 from access_review_agent.tools.policy import DEFAULT_POLICY_CONFIG_PATH, read_policy
@@ -37,7 +38,7 @@ def detect_dormant_admin(
     hris_rows = read_hris(data_dir / "system_hr.csv")
     hris_by_id = {r["employee_id"]: r for r in hris_rows}
 
-    findings = []
+    findings: list[Finding] = []
     for row in access_rows:
         if row["access_level"] != "admin" or row["status"] != "active":
             continue

@@ -11,8 +11,8 @@ one Tier 2 category, wasn't in scope until Milestone 6).
 """
 
 from pathlib import Path
-from typing import Any
 
+from access_review_agent.finding import Finding
 from access_review_agent.github.adapter import GitHubAdapter, IssueResult, get_adapter
 from access_review_agent.grounding import validate_finding
 
@@ -47,7 +47,7 @@ def _as_literal(value: str) -> str:
     return f"`{value.replace('`', chr(0x27))}`"
 
 
-def _format_title(finding: dict[str, Any]) -> str:
+def _format_title(finding: Finding) -> str:
     category = finding["category"]
     system_name = finding["system_name"]
     identity = finding.get("employee_name") or finding["employee_id"]
@@ -56,7 +56,7 @@ def _format_title(finding: dict[str, Any]) -> str:
     return f"{category_display} — {identity} ({system_display})"
 
 
-def _format_body(finding: dict[str, Any], repo_full_name: str, commit_sha: str | None) -> str:
+def _format_body(finding: Finding, repo_full_name: str, commit_sha: str | None) -> str:
     source = finding["source_record"]
     lines = [
         f"**Access detail:** {_as_literal(finding['access_level'])} access to {finding['system_name']}",
@@ -113,14 +113,14 @@ def _format_body(finding: dict[str, Any], repo_full_name: str, commit_sha: str |
     return "\n\n".join(lines)
 
 
-def _format_labels(finding: dict[str, Any]) -> list[str]:
+def _format_labels(finding: Finding) -> list[str]:
     category_label = finding["category"]
     system_label = finding["system_name"].replace("_", "-")
     return [category_label, system_label]
 
 
 def open_issue(
-    finding: dict[str, Any],
+    finding: Finding,
     repo_full_name: str,
     data_dir: Path,
     commit_sha: str | None = None,
