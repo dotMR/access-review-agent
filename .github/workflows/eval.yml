@@ -85,6 +85,9 @@ jobs:
       - name: Verify Escalations-this-period reporting
         run: uv run python scripts/verify_escalations_this_period.py
 
+      - name: Verify Executive Summary trend line
+        run: uv run python scripts/verify_trend_line.py
+
       # Milestones 6 (Identity resolution) and 8 (Risk Assessment
       # narrative + LLM-as-judge) are deliberately NOT run here. Both
       # need a real Agent SDK call, so unlike everything above, every run
