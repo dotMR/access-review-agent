@@ -25,6 +25,7 @@ from access_review_agent.github.adapter import (
     ReleaseResult,
     ReportCommitResult,
     get_adapter,
+    get_escalation_comment_date,
     list_issues,
 )
 from access_review_agent.detection.identity_resolution import detect_identity_resolution
@@ -45,11 +46,12 @@ from access_review_agent.reports import (
     build_monthly_report,
     build_per_system_report,
     category_of,
+    parse_issue_title,
     source_employee_id,
     summary_counts,
     system_of,
 )
-from access_review_agent.risk_assessment import build_risk_assessment_entries
+from access_review_agent.risk_assessment import build_risk_assessment_entries, period_bounds
 from access_review_agent.tools.policy import DEFAULT_ROLE_ACCESS_MAPPING_PATH, read_policy
 from access_review_agent.units import SYSTEMS, SystemDetectionUnit
 
@@ -387,6 +389,14 @@ async def generate_quarterly_reports(
     local); only the narrative text itself is skipped when False, with
     an explicit placeholder rather than a silent gap.
 
+    Also computes the aggregate report's "Escalations this period" table:
+    every Issue with the escalated label whose escalation comment (posted
+    by lifecycle.py's escalate_overdue_issues) falls within this period's
+    own date range (risk_assessment.period_bounds) - not just "currently
+    carries the label," since that label persists for an Issue's whole
+    remaining life once applied (ADR-0005's "fires once") and would
+    otherwise re-appear in every subsequent quarter's report forever.
+
     Does NOT create the Release - see create_quarterly_release for that
     (Milestone 11 split it out deliberately so the human-in-the-loop
     publish gate can sit in front of release creation specifically,
@@ -423,6 +433,27 @@ async def generate_quarterly_reports(
                 }
             )
 
+    period_start, period_end = period_bounds(period)
+    escalated_rows: list[dict[str, Any]] = []
+    for system_name in SYSTEM_ORDER:
+        for issue in per_system_issues[system_name]:
+            if "escalated" not in issue.labels:
+                continue
+            escalated_at = get_escalation_comment_date(repo_full_name, issue.number)
+            if escalated_at is None or not (period_start <= escalated_at < period_end):
+                continue  # escalated in a different period, or (shouldn't happen) no comment found
+            escalated_rows.append(
+                {
+                    "finding": parse_issue_title(issue.title),
+                    "system_name": system_name,
+                    "category": category_of(issue),
+                    "open_since": issue.created_at,
+                    "escalated_at": escalated_at,
+                    "issue_number": issue.number,
+                    "issue_url": issue.html_url,
+                }
+            )
+
     generated_at = datetime.now(timezone.utc).isoformat()
     adapter = get_adapter()
     results: dict[str, ReportCommitResult] = {}
@@ -439,7 +470,11 @@ async def generate_quarterly_reports(
         )
 
     aggregate_content = build_aggregate_report(
-        period, per_system_issues, generated_at, risk_assessment_rows=risk_assessment_rows
+        period,
+        per_system_issues,
+        generated_at,
+        risk_assessment_rows=risk_assessment_rows,
+        escalated_rows=escalated_rows,
     )
     report_contents["aggregate"] = aggregate_content
     results["aggregate"] = adapter.commit_report(

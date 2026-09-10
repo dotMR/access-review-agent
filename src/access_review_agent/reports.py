@@ -11,13 +11,11 @@ table's own columns ("reuses each category's own report-row columns...
 rather than a separate, invented convention") for exactly this reuse, not
 as an ad hoc parsing shortcut.
 
-The Escalations section still renders as an explicit "not yet
-implemented" placeholder, not an empty table - it depends on Milestone 9,
-which doesn't exist yet. Rendering an empty table would falsely imply the
-computation ran and found nothing; it never ran at all. Risk Assessment
-(Milestone 8) follows the same discipline for any *caller* that doesn't
-supply `risk_assessment_rows` - the placeholder always describes "not
-provided for this call," never "not built," once the feature exists.
+Risk Assessment (Milestone 8) renders an explicit "not provided for this
+call" placeholder for any *caller* that doesn't supply
+`risk_assessment_rows` - distinct from "not built," which would be
+misleading once the feature exists (generate_quarterly_reports always
+supplies it; the placeholder is for other/future callers that don't).
 """
 
 import re
@@ -57,9 +55,12 @@ MODEL_NOTE = (
     "claude-haiku-4-5-20251001 via the Agent SDK."
 )
 
-NOT_YET_IMPLEMENTED = "_Not yet implemented — lands in {milestone}. No rows below are a real computation._"
 RISK_ASSESSMENT_NOT_PROVIDED = (
     "_No Risk Assessment data provided for this report (risk_assessment_rows was not "
+    "passed to build_aggregate_report). No rows below are a real computation._"
+)
+ESCALATIONS_NOT_PROVIDED = (
+    "_No Escalations data provided for this report (escalated_rows was not "
     "passed to build_aggregate_report). No rows below are a real computation._"
 )
 
@@ -409,13 +410,24 @@ def build_aggregate_report(
     trend_note: str = "N/A, no prior period",
     reviewer_name: str = "TBD",
     risk_assessment_rows: list[dict[str, Any]] | None = None,
+    escalated_rows: list[dict[str, Any]] | None = None,
 ) -> str:
     """`risk_assessment_rows`, when given, is a list of {category,
     system_name, likelihood, impact, risk_rating, narrative} dicts
     (Milestone 8) — one per (category, system) pair with at least one
-    Finding this quarter. None (the default) renders the "not yet
-    implemented" placeholder, matching Milestone 7's behavior for a
-    caller that hasn't computed Risk Assessment at all.
+    Finding this quarter. None (the default) renders the "not provided
+    for this call" placeholder, for a caller that hasn't computed Risk
+    Assessment at all.
+
+    `escalated_rows`, when given, is a list of {finding, system,
+    category, open_since, escalated_at, issue_number, issue_url} dicts
+    (Milestone 9) — one per Issue whose escalation happened within this
+    period specifically (generate_quarterly_reports filters on that via
+    risk_assessment.period_bounds, since the escalated label itself
+    persists for an Issue's whole remaining life once applied - ADR-0005).
+    None renders the same "not provided for this call" placeholder as
+    risk_assessment_rows; an empty list renders "no escalations this
+    period" instead, since that's a real computed result, not a gap.
     """
     all_issues = [i for issues in per_system_issues.values() for i in issues]
     counts = summary_counts(all_issues)
@@ -500,14 +512,23 @@ def build_aggregate_report(
                 f"{row['likelihood']} | {row['impact']} | {row['risk_rating']} | "
                 f"{_escape_table_cell(row['narrative'])} |"
             )
+    lines += ["", "## Escalations this period", ""]
+    if escalated_rows is None:
+        lines += [ESCALATIONS_NOT_PROVIDED, ""]
     lines += [
-        "",
-        "## Escalations this period",
-        "",
-        NOT_YET_IMPLEMENTED.format(milestone="Milestone 9"),
-        "",
         "| Finding | System | Category | Open since | Escalated | Issue |",
         "| :-- | :-- | :-- | :-- | :-- | :-- |",
+    ]
+    if escalated_rows:
+        for row in escalated_rows:
+            lines.append(
+                f"| {row['finding']} | {SYSTEM_DISPLAY[row['system_name']]} | "
+                f"{CATEGORY_DISPLAY[row['category']]} | {row['open_since']} | "
+                f"{row['escalated_at']} | [#{row['issue_number']}]({row['issue_url']}) |"
+            )
+    elif escalated_rows == []:
+        lines.append("| No escalations this period | | | | | |")
+    lines += [
         "",
         "## Reviewer attestation",
         "",
