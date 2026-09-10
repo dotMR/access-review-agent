@@ -23,8 +23,9 @@ import json
 import re
 from typing import Any
 
-from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
+from claude_agent_sdk import ClaudeAgentOptions
 
+from access_review_agent.agent_sdk import run_query
 from access_review_agent.risk_assessment import RiskAssessmentEntry
 
 MODEL = "claude-haiku-4-5-20251001"
@@ -77,11 +78,7 @@ def _build_facts_prompt(entry: RiskAssessmentEntry) -> str:
 
 
 async def synthesize_narrative(entry: RiskAssessmentEntry) -> tuple[str, float]:
-    """Returns (narrative text, cost in USD). Extracts text via
-    ResultMessage.result, never by stringifying raw SDK message objects —
-    see reference/milestone-6-agent-sdk-patterns/README.md for why that
-    silently breaks.
-    """
+    """Returns (narrative text, cost in USD)."""
     # max_turns=1 makes the "no tools, single-turn by construction" claim
     # explicit rather than implicit (SPEC.md §3/§7's tool-call/iteration
     # cap) - identity_resolution.py's build_options is the one place that
@@ -89,15 +86,7 @@ async def synthesize_narrative(entry: RiskAssessmentEntry) -> tuple[str, float]:
     # out a multi-turn tool-calling loop on its own.
     options = ClaudeAgentOptions(system_prompt=SYSTEM_PROMPT, allowed_tools=[], model=MODEL, max_turns=1)
     prompt = _build_facts_prompt(entry)
-    result_text: str | None = None
-    cost_usd = 0.0
-    async for message in query(prompt=prompt, options=options):
-        if isinstance(message, ResultMessage):
-            result_text = message.result
-            cost_usd = message.total_cost_usd or 0.0
-    if result_text is None:
-        raise RuntimeError("Agent run finished without a ResultMessage")
-    return result_text, cost_usd
+    return await run_query(prompt, options)
 
 
 JUDGE_SYSTEM_PROMPT = """\
@@ -131,14 +120,7 @@ async def judge_narrative(facts: str, narrative: str, criterion: str) -> tuple[b
     # reasoning applies here.
     options = ClaudeAgentOptions(system_prompt=JUDGE_SYSTEM_PROMPT, allowed_tools=[], model=MODEL, max_turns=1)
     prompt = f"FACTS:\n{facts}\n\nNARRATIVE:\n{narrative}\n\nCRITERION:\n{criterion}"
-    result_text: str | None = None
-    cost_usd = 0.0
-    async for message in query(prompt=prompt, options=options):
-        if isinstance(message, ResultMessage):
-            result_text = message.result
-            cost_usd = message.total_cost_usd or 0.0
-    if result_text is None:
-        raise RuntimeError("Judge run finished without a ResultMessage")
+    result_text, cost_usd = await run_query(prompt, options)
 
     match = re.search(r"```json\s*(\{.*?\})\s*```", result_text, re.DOTALL)
     if not match:
