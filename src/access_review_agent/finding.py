@@ -17,15 +17,11 @@ editor runs while you're writing the code, and (2) one place that
 documents what a Finding actually contains across all six categories,
 instead of that shape being implicit and scattered across six files'
 dict literals. A dataclass (real attribute access, matching this
-codebase's other structured shapes) was considered and deferred - it
-would mean rewriting every `finding["x"]` read/write across
-`detection/*.py`, `grounding.py`, `github/issues.py`, and
-`orchestrator.py`, a much bigger diff for the same non-enforced benefit.
-
-A `TypedDict`, not a dataclass, for exactly that reason: every existing
-`finding["category"]`-style dict literal and subscript access keeps
-working unchanged - this file only adds a name and a shape to something
-that was already a plain dict everywhere it's used.
+codebase's other structured shapes) was considered and deferred: every
+existing `finding["x"]` dict literal and subscript access keeps working
+unchanged under a `TypedDict`, where a dataclass would mean rewriting
+all of them across `detection/*.py`, `grounding.py`, `github/issues.py`,
+and `orchestrator.py` for the same non-enforced benefit.
 """
 
 from typing import Any, NotRequired, TypedDict
