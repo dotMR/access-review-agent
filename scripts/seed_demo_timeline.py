@@ -384,17 +384,53 @@ STEPS: list[Step] = [
     Step("9-sla-check", "Re-run production/lifecycle check after same-day SLA passes - escalates the Orphaned Issue", "checkpoint"),
     Step("q1-quarterly", "Trigger quarterly-audit.yml, period=2026-Q1 (approve the create-release gate)", "checkpoint"),
     Step("10", "Isolated low-risk Unapproved (VPN): Todd Bonzalez", "data", step_10),
+    Step(
+        "q2-push-1",
+        "Trigger production workflow to run detection on step 10 alone - flags Todd Bonzalez's "
+        "Unapproved VPN access for real. Must land before step 10b corrects it: this is demo-timeline.md's "
+        "dedicated Risk Assessment contrast case (\"flagged and remediated within the same quarter\"), which "
+        "needs a real Issue to actually open before it can be remediated - batching 10+10b into one push "
+        "means detection never sees the violation at all, and the Issue never opens.",
+        "checkpoint",
+    ),
     Step("11", "Role change (mover): Karl Dandleton, Software Engineer -> Asset Owner (Drift)", "data", step_11),
     Step("12", "Remediation: Ronnis Pawgood's orphaned AWS access revoked", "data", step_12),
     Step("10b", "[auxiliary] Correct Todd Bonzalez's VPN approval before Q2's audit", "data", step_10b),
     Step("3b", "[auxiliary] Age Bobson Dugnutt's GitHub grant past the Dormant admin-level threshold", "data", step_03b),
-    Step("q2-push", "Trigger production workflow to run detection on steps 10-12 + 10b", "checkpoint"),
-    Step("q2-monthly", "Trigger monthly-report.yml, period=2026-05 - catches GitHub's dormant admin (step 3b)", "checkpoint"),
+    Step(
+        "q2-push-2",
+        "Trigger production workflow to run detection on steps 11, 12, 10b, 3b - the remediation re-check "
+        "closes Bonzalez's now-corrected Issue automatically (proving the same-quarter flag-then-remediate "
+        "story for real, not just in the report text), remediates Ronnis Pawgood's Orphaned Issue, and "
+        "opens Karl Dandleton's Drift finding. Bobson Dugnutt's GitHub grant (step 3b) also gets caught here, "
+        "via ordinary push-triggered detection rather than the monthly report specifically - a known, "
+        "accepted characteristic of simulating \"aging\" via a real data commit, not a bug (see "
+        "development-plan.md's Milestone 12 section).",
+        "checkpoint",
+    ),
+    Step("q2-monthly", "Trigger monthly-report.yml, period=2026-05 - informational re-confirmation of GitHub's dormant admin (step 3b), already caught by q2-push-2 above", "checkpoint"),
     Step("13", "Accepted risk: label the Q1 Identity-resolution Issue (from commit 8) - human action", "manual"),
     Step("q2-quarterly", "Trigger quarterly-audit.yml, period=2026-Q2 (approve the create-release gate)", "checkpoint"),
     Step("14", "Second termination: Cecilia Tisio (sharpest Identity resolution case)", "data", step_14),
+    Step(
+        "q3-push-1",
+        "Trigger production workflow to run detection on step 14 alone - opens Cecilia Tisio's own Orphaned "
+        "AWS Issue AND the stale service-account-ownership Identity resolution finding, both from this one "
+        "event. Must land before step 14b's same-day revocation: the deliberate contrast with Q1's missed "
+        "SLA (\"an SLA met cleanly\") needs a real Orphaned Issue to exist first - batching 14+14b into one "
+        "push means her access is already gone before detection ever runs, and the Issue never opens.",
+        "checkpoint",
+    ),
     Step("14b", "[auxiliary] Revoke Cecilia Tisio's own AWS access same-day (SLA met, contrast with Q1)", "data", step_14b),
-    Step("q3-push", "Trigger production workflow to run detection on step 14 + 14b", "checkpoint"),
+    Step(
+        "q3-push-2",
+        "Trigger production workflow to run detection on step 14b - the remediation re-check closes "
+        "Cecilia Tisio's own Orphaned Issue automatically, same-day, before any SLA re-check could fire - "
+        "proving the clean contrast with Q1's miss for real, not just in the report text. The stale "
+        "service-account-ownership Identity resolution finding (also from step 14) is untouched by this - "
+        "a different underlying condition, not remediated by revoking her own access.",
+        "checkpoint",
+    ),
     Step("q3-quarterly", "Trigger quarterly-audit.yml, period=2026-Q3 (approve the create-release gate)", "checkpoint"),
 ]
 
