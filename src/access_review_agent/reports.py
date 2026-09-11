@@ -258,12 +258,14 @@ def _finding_rows(issues: list[IssueInfo], category: str) -> list[dict[str, Any]
 
 
 def _render_category_section(title: str, header: str, row_fmt: str, rows: list[dict[str, Any]]) -> list[str]:
-    lines = [f"### {title}", "", header]
+    lines = [f"### {title}", ""]
     if not rows:
-        header_row = header.split("\n", 1)[0]
-        n_columns = header_row.count("|") - 1
-        lines.append("| No findings" + " |" * (n_columns - 1) + " |")
+        # No table at all here, not even headers with a blank-celled "No
+        # findings" row - same reasoning as the aggregate report's empty
+        # Escalations-this-period section.
+        lines.append("_No findings._")
     else:
+        lines.append(header)
         for row in rows:
             lines.append(row_fmt.format_map(_MissingFieldAsNA(row)))
     lines.append("")
@@ -286,12 +288,12 @@ def build_per_system_report(
     lines = [
         f"# Access Review — {system_display} — {period}",
         "",
-        f"**Report generated:** {generated_at}",
-        f"**Data snapshot:** {data_snapshot_ref}",
-        f"**Model:** {MODEL_NOTE}",
-        f"**Reporting period:** {period}",
-        f"**Asset Owner:** {asset_owner_name}",
-        f"**Committed to:** `reports/{period}/{system_name}.md`",
+        f"- **Report generated:** {generated_at}",
+        f"- **Data snapshot:** {data_snapshot_ref}",
+        f"- **Model:** {MODEL_NOTE}",
+        f"- **Reporting period:** {period}",
+        f"- **Asset Owner:** {asset_owner_name}",
+        f"- **Committed to:** `reports/{period}/{system_name}.md`",
         "",
         "One of these is generated per Information System (AWS, GitHub, Salesforce, "
         "Finance ERP, VPN) each quarter. This is the line-item evidence; the "
@@ -359,8 +361,8 @@ def build_per_system_report(
         f"I attest that the findings above for {system_display} have been reviewed and, "
         "where applicable, remediated or formally accepted as risk.",
         "",
-        f"**Asset Owner:** {asset_owner_name}",
-        "**Date:** _(pending sign-off)_",
+        f"- **Asset Owner:** {asset_owner_name}",
+        "- **Date:** _(pending sign-off)_",
         "",
     ]
     return "\n".join(lines)
@@ -384,21 +386,17 @@ def build_monthly_report(
     lines = [
         f"# Monthly Operational Flags — {system_display} — {period}",
         "",
-        f"**Report generated:** {generated_at}",
-        f"**Asset Owner:** {asset_owner_name}",
-        f"**Committed to:** `reports/monthly/{period}/{system_name}.md`",
+        f"- **Report generated:** {generated_at}",
+        f"- **Asset Owner:** {asset_owner_name}",
+        f"- **Committed to:** `reports/monthly/{period}/{system_name}.md`",
         "",
         "An informational nudge, not a compliance deadline. Lists every currently open "
-        f"Finding for {system_display}, any category — including Orphaned. Orphaned doesn't "
-        "need this report to surface it (it already gets its own same-day notice, and may "
-        "already have escalated), but if one is still open, it belongs in the complete "
-        "picture here too.",
+        f"Finding for {system_display}, any category, including Orphaned.",
         "",
         "This report runs a full reconciliation check every month, the same detection logic "
-        "as any other run — so even a system with no recent commits still gets a fresh look. "
-        "That does not change how a Finding it catches is classified: it's still "
-        "Evidentiary/quarterly, with no SLA of its own, and this report does not gate "
-        "Escalation or change its category's escalation eligibility.",
+        "as any other run. A Finding it catches is still Evidentiary/quarterly, with no SLA "
+        "of its own; this report does not gate Escalation or change its category's "
+        "escalation eligibility.",
         "",
         "## Open items",
         "",
@@ -455,37 +453,38 @@ def build_aggregate_report(
     lines = [
         f"# Quarterly Access Review Audit Report — {period}",
         "",
-        "**Report generated:** " + generated_at,
-        f"**Data snapshot:** {data_snapshot_ref}",
-        f"**Model:** {MODEL_NOTE}",
-        f"**Reporting period:** {period}",
-        "**Systems in scope:** AWS, GitHub, Salesforce, Finance ERP, VPN",
-        "**ISO 27001:2022 controls addressed:** A.5.15 (Access control), A.5.16 (Identity "
+        "- **Report generated:** " + generated_at,
+        f"- **Data snapshot:** {data_snapshot_ref}",
+        f"- **Model:** {MODEL_NOTE}",
+        f"- **Reporting period:** {period}",
+        "- **Systems in scope:** AWS, GitHub, Salesforce, Finance ERP, VPN",
+        "- **ISO 27001:2022 controls addressed:** A.5.15 (Access control), A.5.16 (Identity "
         "management), A.5.18 (Access rights), A.8.2 (Privileged access rights)",
-        "**SOC 2 Common Criteria addressed:** CC6.1 (Logical access controls), CC6.2 "
+        "- **SOC 2 Common Criteria addressed:** CC6.1 (Logical access controls), CC6.2 "
         "(Access provisioning and de-provisioning), CC6.3 (Role-based access, least "
         "privilege, and segregation of duties)",
-        f"**Committed to:** `reports/{period}/aggregate.md`",
+        f"- **Committed to:** `reports/{period}/aggregate.md`",
         "",
-        "This is the formal audit-evidence record for the period, the rollup of the "
-        "five per-system reports below. It does not repeat their line-item findings, "
-        "only aggregates and links to them, so the two can never drift out of sync "
-        "with each other.",
+        "This is the formal audit-evidence record for the period — the rollup of the "
+        "five per-system reports below. It aggregates and links to their line-item "
+        "findings rather than repeating them.",
         "",
         "## Executive summary",
         "",
         f"{total_findings} findings identified this quarter across {len(CATEGORY_ORDER)} finding "
-        f"categories and {len(SYSTEM_ORDER)} Information Systems. {n_remediated} remediated, "
-        f"{n_open} open, {n_accepted} accepted as risk. {trend_note}",
+        f"categories and {len(SYSTEM_ORDER)} Information Systems.",
+        "",
+        f"- Remediated: {n_remediated}",
+        f"- Open: {n_open}",
+        f"- Accepted as risk: {n_accepted}",
+        f"- Trend: {trend_note}",
         "",
         "## Methodology",
         "",
         "The Access Review Agent performed an automated cross-reference of each "
         "Information System's access records (Access/IT System) against the HRIS and "
         "the Access Policy Repository, per the Operational review and Compliance "
-        "review Principles in access-control-policy.md. Findings are categorized per "
-        "policy: orphaned, dormant (admin-level), unapproved, identity resolution, "
-        "and drift access.",
+        "review Principles in access-control-policy.md.",
         "",
         "## Resolution status by system",
         "",
@@ -505,14 +504,16 @@ def build_aggregate_report(
     lines.append(
         f"| **Total** | {n_open} | {n_remediated} | {n_accepted} | {total_findings} | |"
     )
+    lines += [
+        "",
+        "Line-item detail for every finding lives in the per-system reports linked "
+        "above and in the Appendix, not here.",
+    ]
 
     lines += ["", "## Findings by category (aggregate)", ""]
     lines += _counts_table(all_issues, [(c, CATEGORY_DISPLAY[c]) for c in CATEGORY_ORDER])[:-1]
     # drop the Total row here - SPEC's aggregate template has no Total row on this table
     lines += [
-        "",
-        "Line-item detail for every finding lives in the per-system reports linked "
-        "above and in the Appendix, not here.",
         "",
         "## Risk Assessment",
         "",
@@ -532,20 +533,30 @@ def build_aggregate_report(
             )
     lines += ["", "## Escalations this period", ""]
     if escalated_rows is None:
-        lines += [ESCALATIONS_NOT_PROVIDED, ""]
-    lines += [
-        "| Finding | System | Category | Open since | Escalated | Issue |",
-        "| :-- | :-- | :-- | :-- | :-- | :-- |",
-    ]
-    if escalated_rows:
+        lines += [
+            ESCALATIONS_NOT_PROVIDED,
+            "",
+            "| Finding | System | Category | Open since | Escalated | Issue |",
+            "| :-- | :-- | :-- | :-- | :-- | :-- |",
+        ]
+    elif escalated_rows:
+        lines += [
+            "| Finding | System | Category | Open since | Escalated | Issue |",
+            "| :-- | :-- | :-- | :-- | :-- | :-- |",
+        ]
         for row in escalated_rows:
             lines.append(
                 f"| {row['finding']} | {SYSTEM_DISPLAY[row['system_name']]} | "
                 f"{CATEGORY_DISPLAY[row['category']]} | {row['open_since']} | "
                 f"{row['escalated_at']} | [#{row['issue_number']}]({row['issue_url']}) |"
             )
-    elif escalated_rows == []:
-        lines.append("| No escalations this period | | | | | |")
+    else:
+        # No table at all here (not even headers-only) - some Markdown
+        # renderers (confirmed: the `markdown` package this project's own
+        # PDF export uses) synthesize a phantom empty data row for a
+        # header-only table, which is exactly the "blank trailing cells"
+        # look this is meant to avoid.
+        lines += ["_No escalations this period._"]
     lines += [
         "",
         "## Reviewer attestation",
@@ -553,8 +564,8 @@ def build_aggregate_report(
         "I have reviewed this report and the underlying per-system reports, and "
         "accept this as the formal audit-evidence record for the period stated above.",
         "",
-        f"**Security/Compliance Reviewer:** {reviewer_name}",
-        "**Date:** _(pending sign-off)_",
+        f"- **Security/Compliance Reviewer:** {reviewer_name}",
+        "- **Date:** _(pending sign-off)_",
         "",
         "## Appendix",
         "",
