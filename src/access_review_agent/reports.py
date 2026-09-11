@@ -439,10 +439,15 @@ def build_aggregate_report(
     Assessment at all.
 
     `escalated_rows`, when given, is a list of {finding, system,
-    category, open_since, escalated_at, issue_number, issue_url} dicts
-    (Milestone 9) — one per Issue that escalated within this period
-    specifically, per generate_quarterly_reports's own filtering. None
-    renders the same "not provided for this call" placeholder as
+    category, open_since, escalated_at, status, issue_number, issue_url}
+    dicts (Milestone 9) — one per Issue that escalated within this period
+    specifically, per generate_quarterly_reports's own filtering.
+    `status` (Open/Remediated/Accepted risk) is the Issue's *current*
+    state, not its state at escalation time - an escalation is a real
+    historical event that stays in this table for the period it happened
+    in even after the finding is later resolved, so the column exists to
+    keep that distinction visible rather than reading as still-open.
+    None renders the same "not provided for this call" placeholder as
     risk_assessment_rows; an empty list renders "no escalations this
     period" instead, since that's a real computed result, not a gap.
     """
@@ -537,19 +542,19 @@ def build_aggregate_report(
         lines += [
             ESCALATIONS_NOT_PROVIDED,
             "",
-            "| Finding | System | Category | Open since | Escalated | Issue |",
-            "| :-- | :-- | :-- | :-- | :-- | :-- |",
+            "| Finding | System | Category | Open since | Escalated | Status | Issue |",
+            "| :-- | :-- | :-- | :-- | :-- | :-- | :-- |",
         ]
     elif escalated_rows:
         lines += [
-            "| Finding | System | Category | Open since | Escalated | Issue |",
-            "| :-- | :-- | :-- | :-- | :-- | :-- |",
+            "| Finding | System | Category | Open since | Escalated | Status | Issue |",
+            "| :-- | :-- | :-- | :-- | :-- | :-- | :-- |",
         ]
         for row in escalated_rows:
             lines.append(
                 f"| {row['finding']} | {SYSTEM_DISPLAY[row['system_name']]} | "
                 f"{CATEGORY_DISPLAY[row['category']]} | {row['open_since']} | "
-                f"{row['escalated_at']} | [#{row['issue_number']}]({row['issue_url']}) |"
+                f"{row['escalated_at']} | {row['status']} | [#{row['issue_number']}]({row['issue_url']}) |"
             )
     else:
         # No table at all here (not even headers-only) - some Markdown
