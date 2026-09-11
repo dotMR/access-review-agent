@@ -42,9 +42,15 @@ def _git_init(path: Path) -> None:
     """generate_quarterly_reports now resolves the Data snapshot field via
     `git rev-parse HEAD` against checkout_dir - a real checkout always has
     one, but these fixtures' plain temp dirs don't unless this runs first.
+    -c user.name/user.email rather than relying on global git config,
+    which a CI runner has no reason to have set.
     """
     subprocess.run(["git", "init", "-q"], cwd=path, check=True)
-    subprocess.run(["git", "commit", "-q", "--allow-empty", "-m", "init"], cwd=path, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=test", "-c", "user.email=test@example.com",
+         "commit", "-q", "--allow-empty", "-m", "init"],
+        cwd=path, check=True,
+    )
 
 
 class _RecordingAdapter:

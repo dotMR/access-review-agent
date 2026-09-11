@@ -71,7 +71,11 @@ async def case_data_snapshot_resolves_to_real_commit() -> bool:
     with tempfile.TemporaryDirectory() as tmp:
         checkout_dir = Path(tmp)
         subprocess.run(["git", "init", "-q"], cwd=checkout_dir, check=True)
-        subprocess.run(["git", "commit", "-q", "--allow-empty", "-m", "init"], cwd=checkout_dir, check=True)
+        subprocess.run(
+            ["git", "-c", "user.name=test", "-c", "user.email=test@example.com",
+             "commit", "-q", "--allow-empty", "-m", "init"],
+            cwd=checkout_dir, check=True,
+        )
         head_sha = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=checkout_dir, capture_output=True, text=True, check=True
         ).stdout.strip()
