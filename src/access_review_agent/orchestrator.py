@@ -411,6 +411,13 @@ async def generate_quarterly_reports(
     already there" discipline as the Escalations table above). "N/A, no
     prior period" only for a genuine first quarter.
 
+    Also resolves every report's Data snapshot field to `checkout_dir`'s
+    real current commit (`git rev-parse HEAD`, same mechanism
+    create_quarterly_release already uses for tagging), linked as a
+    `tree/<sha>` GitHub URL - a real answer to "which exact commit of the
+    data does this report's claims reflect," not the permanent "N/A
+    (manual/local run)" placeholder every caller left it at before.
+
     Does NOT create the Release - see create_quarterly_release for that
     (Milestone 11 split it out deliberately so the human-in-the-loop
     publish gate can sit in front of release creation specifically,
@@ -469,13 +476,18 @@ async def generate_quarterly_reports(
             )
 
     generated_at = datetime.now(timezone.utc).isoformat()
+    commit_sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=checkout_dir, capture_output=True, text=True, check=True
+    ).stdout.strip()
+    data_snapshot_ref = f"[`{commit_sha[:7]}`](https://github.com/{repo_full_name}/tree/{commit_sha})"
     adapter = get_adapter()
     results: dict[str, ReportCommitResult] = {}
     report_contents: dict[str, str] = {}
 
     for system_name in SYSTEM_ORDER:
         content = build_per_system_report(
-            system_name, period, per_system_issues[system_name], generated_at
+            system_name, period, per_system_issues[system_name], generated_at,
+            data_snapshot_ref=data_snapshot_ref,
         )
         report_contents[system_name] = content
         path = f"reports/{period}/{system_name}.md"
@@ -498,6 +510,7 @@ async def generate_quarterly_reports(
         period,
         per_system_issues,
         generated_at,
+        data_snapshot_ref=data_snapshot_ref,
         trend_note=trend_note,
         risk_assessment_rows=risk_assessment_rows,
         escalated_rows=escalated_rows,
