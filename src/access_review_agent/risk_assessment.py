@@ -86,22 +86,38 @@ def previous_period(period: str) -> str:
     return f"{year}-Q{quarter - 1}"
 
 
-_PRIOR_TOTAL_RE = re.compile(r"^(\d+) findings identified this quarter", re.MULTILINE)
+_TOTAL_ROW_RE = re.compile(
+    r"^\|\s*\*\*Total\*\*\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|", re.MULTILINE
+)
 
 
-def read_prior_aggregate_total(checkout_dir: Path, period: str) -> int | None:
-    """Total findings count parsed back out of the previous period's own
-    aggregate report (a local file read, not a GitHub API call - same
-    "reuse what's already there" discipline as read_prior_report, just
-    at the aggregate level) - for build_aggregate_report's Executive
-    Summary trend line. None if that period's aggregate report doesn't
-    exist yet (e.g. this is the first quarter).
+def read_period_history(checkout_dir: Path, period: str) -> list[dict[str, int | str]]:
+    """Every earlier period's own {period, open, remediated, accepted_risk,
+    total} - parsed back out of each period's already-committed aggregate
+    report's "Resolution status by system" Total row (a local file read,
+    not a GitHub API call - same "reuse what's already there" discipline
+    as read_prior_report), walking backward from `period` until a
+    period's aggregate report doesn't exist yet. Returned oldest-first,
+    for the Trend section's multi-quarter table - `period`'s own row
+    isn't included here, since it's still being built by the same call
+    that needs this history, not yet committed to disk.
     """
-    path = checkout_dir / "reports" / previous_period(period) / "aggregate.md"
-    if not path.exists():
-        return None
-    match = _PRIOR_TOTAL_RE.search(path.read_text())
-    return int(match.group(1)) if match else None
+    history: list[dict[str, int | str]] = []
+    walk = period
+    while True:
+        walk = previous_period(walk)
+        path = checkout_dir / "reports" / walk / "aggregate.md"
+        if not path.exists():
+            break
+        match = _TOTAL_ROW_RE.search(path.read_text())
+        if not match:
+            break
+        open_n, remediated_n, accepted_n, total_n = (int(x) for x in match.groups())
+        history.append(
+            {"period": walk, "open": open_n, "remediated": remediated_n, "accepted_risk": accepted_n, "total": total_n}
+        )
+    history.reverse()
+    return history
 
 
 def period_bounds(period: str) -> tuple[str, str]:
