@@ -149,7 +149,7 @@ Ran `demo-timeline.md`'s seeding tool and every trigger (`production.yml`, `mont
 
 **The last deferred spec item closed.** Two live identity-resolution queries both completed in exactly 4 turns — `SPEC.md` §3's tool-call/iteration cap is now pinned at 10 (`ClaudeAgentOptions.max_turns`), enforced in code.
 
-**Proves:** every mechanism this project claims — detection, grounding, Escalation, Accepted Risk, remediation auto-close, the monthly quiet-system catch, Risk Assessment with real narrative synthesis, trend lines, and a human-approved tagged Release — genuinely works against real GitHub state. Ten real defects found this way never showed up in any eval case.
+**Proves:** every mechanism this project claims — detection, grounding, Escalation, Accepted Risk, remediation auto-close, the monthly trigger's own independent detection cadence, Risk Assessment with real narrative synthesis, trend lines, and a human-approved tagged Release — genuinely works against real GitHub state. (Not proven, and corrected in `demo-timeline.md`: the "quiet system caught only by monthly" scenario specifically — the timeline's own technique for simulating a threshold crossing requires a commit that ordinary push detection catches first, a limitation of the seeding technique, not a gap in the monthly trigger's real value.) Ten real defects found this way never showed up in any eval case.
 **Gate:** every fix landed as its own branch → PR → CI-green → merge, each with a permanent regression guard in `eval.yml` (`scripts/verify_*.py`). Three published, internally-consistent quarterly Releases; the demo-data sequencing gap is documented, not concealed.
 
 ---
