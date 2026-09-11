@@ -50,9 +50,10 @@ SYSTEM_DISPLAY = {
 SYSTEM_LABEL = {name: name.replace("_", "-") for name in SYSTEM_ORDER}
 
 MODEL_NOTE = (
-    "Tier 1 (Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, Drift): "
-    "plain Python, no model call (ADR-0006). Tier 2 (Identity resolution): "
-    "claude-haiku-4-5-20251001 via the Agent SDK."
+    "Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, and Drift findings are "
+    "determined by deterministic rule-based checks - no AI model involved. Identity "
+    "resolution findings, which require judgment on ambiguous cases, are determined "
+    "using Claude Haiku 4.5 (Anthropic)."
 )
 
 RISK_ASSESSMENT_NOT_PROVIDED = (

@@ -27,6 +27,7 @@ real temp directory with a hand-written prior-period aggregate.md, since
 read_prior_aggregate_total is a local file read, not a GitHub call.
 """
 
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -35,6 +36,21 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 SCRATCH_REPO = "dotMR/access-review-agent-scratch"
+
+
+def _git_init(path: Path) -> None:
+    """generate_quarterly_reports now resolves the Data snapshot field via
+    `git rev-parse HEAD` against checkout_dir - a real checkout always has
+    one, but these fixtures' plain temp dirs don't unless this runs first.
+    -c user.name/user.email rather than relying on global git config,
+    which a CI runner has no reason to have set.
+    """
+    subprocess.run(["git", "init", "-q"], cwd=path, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=test", "-c", "user.email=test@example.com",
+         "commit", "-q", "--allow-empty", "-m", "init"],
+        cwd=path, check=True,
+    )
 
 
 class _RecordingAdapter:
@@ -74,6 +90,7 @@ async def case_trend_line_compares_against_prior_period() -> bool:
 
     with tempfile.TemporaryDirectory() as tmp:
         checkout_dir = Path(tmp)
+        _git_init(checkout_dir)
         prior_dir = checkout_dir / "reports" / "2026-Q1"
         prior_dir.mkdir(parents=True)
         (prior_dir / "aggregate.md").write_text(
@@ -117,6 +134,7 @@ async def case_first_quarter_still_shows_placeholder() -> bool:
 
     with tempfile.TemporaryDirectory() as tmp:
         checkout_dir = Path(tmp)
+        _git_init(checkout_dir)
         issues = [_mock_issue(201, "orphaned", "vpn")]
         with (
             patch("access_review_agent.orchestrator.list_issues", return_value=issues),
