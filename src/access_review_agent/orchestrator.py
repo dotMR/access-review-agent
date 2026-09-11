@@ -49,6 +49,7 @@ from access_review_agent.reports import (
     count_escalations_this_period,
     parse_issue_title,
     source_employee_id,
+    status_of,
     summary_counts,
     system_of,
 )
@@ -470,6 +471,7 @@ async def generate_quarterly_reports(
                     "category": category_of(issue),
                     "open_since": issue.created_at,
                     "escalated_at": escalated_at,
+                    "status": status_of(issue),
                     "issue_number": issue.number,
                     "issue_url": issue.html_url,
                 }

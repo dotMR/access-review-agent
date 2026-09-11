@@ -151,6 +151,63 @@ async def case_no_escalations_renders_real_empty_result() -> bool:
     return not problems
 
 
+async def case_escalation_shows_current_status_not_just_open() -> bool:
+    """An escalation is a real historical event that stays in the table
+    for the period it happened in, even after the finding is later
+    resolved - found reviewing a real Q3 report where a remediated
+    finding's escalation entry had no status at all, reading as if it
+    were still an open concern. The Status column must show the Issue's
+    *current* state (Remediated here), not just link a closed Issue with
+    no context.
+    """
+    from datetime import datetime, timezone
+
+    from access_review_agent.github.adapter import IssueInfo
+    from access_review_agent.orchestrator import generate_quarterly_reports
+
+    remediated_escalation = IssueInfo(
+        number=201,
+        title="Orphaned access — Someone (AWS)",
+        body=(
+            "**Access detail:** `write` access to aws\n\n"
+            "**Expected per policy:** N/A\n\n"
+            "**Source record:** `access_aws.csv`, row matching `employee_id=E201`"
+        ),
+        state="closed",
+        labels=["orphaned", "aws", "escalated"],
+        created_at="2026-07-01T00:00:00+00:00",
+        closed_at="2026-08-01T00:00:00+00:00",
+        html_url="https://example.com/issues/201",
+    )
+
+    with (
+        patch("access_review_agent.orchestrator.list_issues", return_value=[remediated_escalation]),
+        patch(
+            "access_review_agent.orchestrator.get_escalation_comment_date",
+            return_value="2026-07-02T00:00:00+00:00",
+        ),
+        patch("access_review_agent.orchestrator.get_adapter", return_value=_RecordingAdapter()) as get_adapter,
+    ):
+        await generate_quarterly_reports(SCRATCH_REPO, "2026-Q3", REPO_ROOT, generate_narrative=False)
+        aggregate_content = get_adapter.return_value.committed["reports/2026-Q3/aggregate.md"]
+
+    escalations_section = aggregate_content.split("## Escalations this period")[1].split("## Reviewer")[0]
+    problems = []
+    if "| Status |" not in escalations_section:
+        problems.append("expected a Status column header in the Escalations this period table")
+    if "Remediated" not in escalations_section:
+        problems.append("expected #201's row to show 'Remediated', its current status - got no status at all")
+
+    status = "PASS" if not problems else "FAIL"
+    print(
+        f"[{status}] escalation-shows-current-status — a since-remediated finding's escalation "
+        "row shows its current status, not just a bare link with no context"
+    )
+    for p in problems:
+        print(f"         {p}")
+    return not problems
+
+
 def case_release_body_escalation_count_matches_report() -> bool:
     """The Release body's escalation count must come from the same
     period-filtered computation as the report's own Escalations table,
@@ -192,6 +249,7 @@ async def main() -> None:
     results = [
         await case_only_this_periods_escalations_appear(),
         await case_no_escalations_renders_real_empty_result(),
+        await case_escalation_shows_current_status_not_just_open(),
         case_release_body_escalation_count_matches_report(),
     ]
     total, passed = len(results), sum(results)
