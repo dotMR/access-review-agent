@@ -51,17 +51,17 @@ Per-category, per-system risk rating, synthesized from this section's own inputs
 
 Only categories with at least one finding this quarter get a row, there's nothing to assess against zero findings; a category's absence here is explained by its zero count in Findings by category above, not a silent omission.
 
-| Category | System | Likelihood | Impact | Risk Rating | Narrative & treatment recommendation |
+| Category | System | Likelihood | Impact | Risk Rating | Treatment |
 | :-- | :-- | :-- | :-- | :-- | :-- |
-| {{category}} | {{system_name}} | {{Low/Medium/High}} | {{Low/Medium/High}} | {{Low/Medium/High/Critical}} | {{narrative citing specific Issue numbers, noting isolated vs. recurring, and a treatment recommendation if recurring}} |
+| {{category}} | {{system_name}} | {{Low/Medium/High}} | {{Low/Medium/High}} | {{Low/Medium/High/Critical}} | {{2-3 sentences of analysis citing specific Issue numbers and noting isolated vs. recurring, then a "Recommendation: ..." line}} |
 
 ## Escalations this period
 
-Findings whose GitHub Issue was still open past their own category's Operational cadence (same-day for Orphaned, currently the only category with one in v1), escalated to the Reviewer immediately rather than waiting for this report, per access-control-policy.md's Unremediated findings Principle, the sole Escalation trigger. Empty is a valid, good state, show "None this period" explicitly rather than omitting the section.
+Findings whose GitHub Issue was still open past their own category's Operational cadence (same-day for Orphaned, currently the only category with one in v1), escalated to the Reviewer immediately rather than waiting for this report, per access-control-policy.md's Unremediated findings Principle, the sole Escalation trigger. An escalation stays in the table for the period it happened in even after the finding is later resolved - the Status column shows its current state, since without that the row would read as still-open. Empty is a valid, good state, show "None this period" explicitly rather than omitting the section.
 
-| Finding | System | Category | Open since | Escalated | Issue |
-| :-- | :-- | :-- | :-- | :-- | :-- |
-| {{employee_name}} | {{system_name}} | {{category}} | {{date_first_flagged}} | {{escalation_date}} | [#{{issue_number}}]({{issue_url}}) |
+| Finding | System | Category | Open since | Escalated | Status | Issue |
+| :-- | :-- | :-- | :-- | :-- | :-- | :-- |
+| {{employee_name}} | {{system_name}} | {{category}} | {{date_first_flagged}} | {{escalation_date}} | {{Open/Remediated/Accepted risk}} | [#{{issue_number}}]({{issue_url}}) |
 
 ## Reviewer attestation
 

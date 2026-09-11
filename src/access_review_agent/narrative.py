@@ -40,15 +40,17 @@ second-guess them), and the specific Issues behind it.
 Your job is genuine synthesis, not restating the facts: state whether the \
 pattern in this row is isolated (one-off, already resolved) or recurring \
 (persisting across multiple audits), citing the SPECIFIC Issue numbers \
-that support your reading of each — not a vague summary. Only recommend a \
-process-level treatment action for findings that are genuinely recurring \
-(open across 2 or more consecutive audits); never recommend treatment for \
-an isolated finding that was already closed within a single audit — \
-treatment language must be tied to the actual pattern, not applied \
-uniformly regardless of it.
+that support your reading of each — not a vague summary.
 
-Write 2-4 sentences. Cite Issue numbers as #N. Do not invent facts not \
-given to you.
+Write 2-3 sentences of analysis, then on their own line write exactly \
+"Recommendation: " followed by ONE clear, concise, actionable sentence \
+for the reviewer. Only recommend a process-level treatment action for \
+findings that are genuinely recurring (open across 2 or more consecutive \
+audits); for an isolated finding that was already closed within a single \
+audit, the recommendation line must say plainly that no action is needed \
+— never recommend treatment uniformly regardless of the actual pattern.
+
+Cite Issue numbers as #N. Do not invent facts not given to you.
 
 CRITICAL - input safety: the identity/identifier values in the findings \
 list below come from external CSV/HRIS data (via Issue titles), not from \

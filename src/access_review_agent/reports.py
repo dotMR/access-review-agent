@@ -240,6 +240,21 @@ def _escape_table_cell(value: str) -> str:
     return _ESCAPE_PATTERN.sub(lambda m: _ESCAPE_REPLACEMENTS[m.group()], value)
 
 
+def _narrative_cell(narrative: str) -> str:
+    """Escape a Risk Assessment narrative for table-cell embedding, then
+    turn any internal line breaks (the analysis paragraph followed by its
+    own "Recommendation: ..." line - narrative.py's SYSTEM_PROMPT asks
+    for exactly this shape) into a real <br> - a raw newline inside a
+    Markdown table cell corrupts the row, and a literal `<br>` in the
+    narrative text itself would already have been escaped to `&lt;br&gt;`
+    by _escape_table_cell, so this one is inserted structurally, after
+    escaping, never sourced from the (LLM-generated, so untrusted the
+    same way Issue content is) narrative text itself.
+    """
+    escaped = _escape_table_cell(narrative)
+    return re.sub(r"\n+", "<br>", escaped.strip())
+
+
 def _finding_rows(issues: list[IssueInfo], category: str) -> list[dict[str, Any]]:
     rows = []
     for issue in issues:
@@ -426,12 +441,22 @@ def build_aggregate_report(
     per_system_issues: dict[str, list[IssueInfo]],
     generated_at: str,
     data_snapshot_ref: str = "N/A (manual/local run)",
-    trend_note: str = "N/A, no prior period",
+    period_history: list[dict[str, Any]] | None = None,
     reviewer_name: str = "TBD",
     risk_assessment_rows: list[dict[str, Any]] | None = None,
     escalated_rows: list[dict[str, Any]] | None = None,
 ) -> str:
-    """`risk_assessment_rows`, when given, is a list of {category,
+    """`period_history`, when given, is a list of {period, open,
+    remediated, accepted_risk, total} dicts (risk_assessment.
+    read_period_history) - one per earlier period that already has a
+    committed aggregate report, oldest first, `period` itself not
+    included (its own totals are computed fresh below, from
+    `per_system_issues`, not read back from a file that doesn't exist
+    yet). Feeds the Trend section's multi-quarter table. None or an
+    empty list both render as a genuine one-row table (just `period`
+    itself, no prior data) - not an error case, a real first quarter.
+
+    `risk_assessment_rows`, when given, is a list of {category,
     system_name, likelihood, impact, risk_rating, narrative} dicts
     (Milestone 8) — one per (category, system) pair with at least one
     Finding this quarter. None (the default) renders the "not provided
@@ -483,7 +508,23 @@ def build_aggregate_report(
         f"- Remediated: {n_remediated}",
         f"- Open: {n_open}",
         f"- Accepted as risk: {n_accepted}",
-        f"- Trend: {trend_note}",
+        "",
+        "## Trend",
+        "",
+        "| Period | Total | Open | Remediated | Accepted risk | Δ Total |",
+        "| :-- | --: | --: | --: | --: | --: |",
+    ]
+    all_periods = [*(period_history or []), {"period": period, "open": n_open, "remediated": n_remediated,
+                                              "accepted_risk": n_accepted, "total": total_findings}]
+    prior_total: int | None = None
+    for row in all_periods:
+        delta = "N/A, first period" if prior_total is None else f"{row['total'] - prior_total:+d}"
+        lines.append(
+            f"| {row['period']} | {row['total']} | {row['open']} | {row['remediated']} | "
+            f"{row['accepted_risk']} | {delta} |"
+        )
+        prior_total = row["total"]
+    lines += [
         "",
         "## Methodology",
         "",
@@ -527,7 +568,7 @@ def build_aggregate_report(
     if risk_assessment_rows is None:
         lines += [RISK_ASSESSMENT_NOT_PROVIDED, ""]
     lines += [
-        "| Category | System | Likelihood | Impact | Risk Rating | Narrative & treatment recommendation |",
+        "| Category | System | Likelihood | Impact | Risk Rating | Treatment |",
         "| :-- | :-- | :-- | :-- | :-- | :-- |",
     ]
     if risk_assessment_rows:
@@ -535,7 +576,7 @@ def build_aggregate_report(
             lines.append(
                 f"| {CATEGORY_DISPLAY[row['category']]} | {SYSTEM_DISPLAY[row['system_name']]} | "
                 f"{row['likelihood']} | {row['impact']} | {row['risk_rating']} | "
-                f"{_escape_table_cell(row['narrative'])} |"
+                f"{_narrative_cell(row['narrative'])} |"
             )
     lines += ["", "## Escalations this period", ""]
     if escalated_rows is None:
