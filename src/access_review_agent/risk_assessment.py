@@ -197,10 +197,13 @@ def build_risk_assessment_entries(
     """One entry per category with at least one Finding this quarter for
     this system (SPEC.md §5's "one entry per (category, system) pair").
     Groups `issues` by category, computes each finding's own recurrence
-    count, then the entry's overall Likelihood (the max across its
-    findings - the most persistent finding governs the category+system's
-    rating) and Impact (the highest access level among its findings -
-    worst-case exposure governs), and the Risk Rating from those two.
+    count - always 1 for a currently-remediated finding, regardless of
+    how many periods it was open before being fixed, since a resolved
+    finding isn't "recurring" - then the entry's overall Likelihood (the
+    max across its findings - the most persistent finding governs the
+    category+system's rating) and Impact (the highest access level among
+    its findings - worst-case exposure governs), and the Risk Rating
+    from those two.
     """
     by_category: dict[str, list[IssueInfo]] = {}
     for issue in issues:
@@ -217,7 +220,20 @@ def build_risk_assessment_entries(
         for issue in category_issues:
             fields = parse_issue_body(issue.body)
             access_level = _extract_access_level(fields.get("access_detail", ""))
-            consecutive = count_consecutive_periods(issue.number, category, period, checkout_dir, system_name)
+            # A remediated finding is resolved, full stop - "recurring"
+            # only means something for a still-live problem (Open or
+            # Accepted risk). Skipping the backward-walk here rather than
+            # teaching it about status: an Issue can never legitimately
+            # go Remediated -> Open again under the same number (a later
+            # recurrence of the same problem gets a fresh Issue - the
+            # duplicate-Issue-prevention design's own "a fixed-then-later-
+            # recurring finding is a genuinely new instance" rule), so
+            # count_consecutive_periods's own multi-period walk is only
+            # ever meaningful for an issue that's still open right now.
+            if status_of(issue) == "Remediated":
+                consecutive = 1
+            else:
+                consecutive = count_consecutive_periods(issue.number, category, period, checkout_dir, system_name)
             findings.append(
                 FindingSummary(
                     issue_number=issue.number,
