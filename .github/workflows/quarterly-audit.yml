@@ -99,6 +99,19 @@ jobs:
           ENABLE_RISK_ASSESSMENT_NARRATIVE: ${{ inputs.generate_narrative }}
         run: uv run python scripts/run_quarterly_reports.py
 
+      - name: Post aggregate report to job summary for reviewer visibility
+        # commit_report writes via the GitHub Contents API, not a local git
+        # commit, so this checkout doesn't have the just-written file until
+        # a pull - the create-release job's own approval gate (SPEC.md §7)
+        # otherwise has nothing on the run page itself showing the reviewer
+        # what they're actually approving, only a bare "Approve deployment"
+        # button with no report content anywhere near it.
+        env:
+          PERIOD: ${{ steps.period.outputs.period }}
+        run: |
+          git pull
+          cat "reports/$PERIOD/aggregate.md" >> "$GITHUB_STEP_SUMMARY"
+
   create-release:
     needs: quarterly-report
     runs-on: ubuntu-latest
