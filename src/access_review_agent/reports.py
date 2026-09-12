@@ -247,15 +247,20 @@ def _narrative_cell(narrative: str) -> str:
     """Escape a Risk Assessment narrative for table-cell embedding, then
     turn any internal line breaks (the analysis paragraph followed by its
     own "Recommendation: ..." line - narrative.py's SYSTEM_PROMPT asks
-    for exactly this shape) into a real <br> - a raw newline inside a
+    for exactly this shape) into real <br>s - a raw newline inside a
     Markdown table cell corrupts the row, and a literal `<br>` in the
     narrative text itself would already have been escaped to `&lt;br&gt;`
-    by _escape_table_cell, so this one is inserted structurally, after
+    by _escape_table_cell, so these are inserted structurally, after
     escaping, never sourced from the (LLM-generated, so untrusted the
     same way Issue content is) narrative text itself.
+
+    The break right before "Recommendation:" is doubled so it reads as a
+    clear, separate line rather than wrapping immediately after the
+    analysis paragraph's last sentence.
     """
     escaped = _escape_table_cell(narrative)
-    return re.sub(r"\n+", "<br>", escaped.strip())
+    collapsed = re.sub(r"\n+", "<br>", escaped.strip())
+    return re.sub(r"<br>(Recommendation:)", r"<br><br>\1", collapsed)
 
 
 def _finding_rows(issues: list[IssueInfo], category: str) -> list[dict[str, Any]]:
