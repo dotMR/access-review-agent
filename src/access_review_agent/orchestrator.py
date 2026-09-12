@@ -435,11 +435,27 @@ async def generate_quarterly_reports(
         for system_name in SYSTEM_ORDER
     }
 
+    period_start, period_end = period_bounds(period)
+
     system_criticality = read_policy(DEFAULT_ROLE_ACCESS_MAPPING_PATH)["system_criticality"]
     risk_assessment_rows: list[dict[str, Any]] = []
     for system_name in SYSTEM_ORDER:
+        # SPEC.md §5: "one entry per (category, system) pair with at least
+        # one Finding this quarter" - per_system_issues is the full lifetime
+        # list (correct for the per-system/aggregate resolution-status
+        # rollups below, which are cumulative by design), but passing that
+        # same lifetime list here made an issue closed in an EARLIER quarter
+        # resurface in every later quarter's table too, with its narrative
+        # wrongly claiming it was "remediated within the same audit cycle."
+        # An issue belongs to this quarter's Risk Assessment only if it's
+        # still open (a live finding) or was closed within this quarter's
+        # own bounds (a resolution this quarter's record should show).
+        this_quarter_issues = [
+            i for i in per_system_issues[system_name]
+            if i.state == "open" or (i.closed_at and period_start <= i.closed_at < period_end)
+        ]
         entries = build_risk_assessment_entries(
-            system_name, per_system_issues[system_name], period, checkout_dir, system_criticality[system_name]
+            system_name, this_quarter_issues, period, checkout_dir, system_criticality[system_name]
         )
         for entry in entries:
             if generate_narrative:
@@ -457,7 +473,6 @@ async def generate_quarterly_reports(
                 }
             )
 
-    period_start, period_end = period_bounds(period)
     escalated_rows: list[dict[str, Any]] = []
     for system_name in SYSTEM_ORDER:
         for issue in per_system_issues[system_name]:
