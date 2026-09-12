@@ -15,6 +15,7 @@ the same way grounding.py and reports.py already do, just one level up
 
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 from access_review_agent.github.adapter import IssueInfo
@@ -76,6 +77,37 @@ def read_prior_report(checkout_dir: Path, period: str, system_name: str) -> dict
     if not path.exists():
         return None
     return parse_report_issue_numbers(path.read_text())
+
+
+_GENERATED_AT_RE = re.compile(r"^- \*\*Report generated:\*\* (\S+)", re.MULTILINE)
+
+
+def read_prior_report_generated_at(checkout_dir: Path, period: str) -> datetime | None:
+    """The immediately preceding period's own aggregate report's real
+    "Report generated" timestamp - None if that period's report doesn't
+    exist yet (e.g. this is the first quarter).
+
+    Used to scope Risk Assessment to genuinely-this-quarter findings
+    (SPEC.md §5) without comparing against period_bounds' SIMULATED
+    calendar quarter boundaries, which real closed_at timestamps can't
+    be trusted against outside of real, un-simulated production use: a
+    live trial that simulates three quarters within a single real day
+    (Milestone 12) closes issues with real "today" timestamps regardless
+    of which simulated quarter they represent, so a wall-clock-only
+    check can't tell "closed during simulated Q2" from "closed during
+    simulated Q3" - they're both really today. Comparing against the
+    PRIOR period's own report-generation moment instead asks a real,
+    sequential question with no simulated calendar involved at all: did
+    this closure happen after the last time we generated a report for
+    the prior period, or before it (already covered there, whatever
+    simulated period is nominally in effect). Correct in genuine
+    production too, where periods advance in real time anyway.
+    """
+    path = checkout_dir / "reports" / previous_period(period) / "aggregate.md"
+    if not path.exists():
+        return None
+    match = _GENERATED_AT_RE.search(path.read_text())
+    return datetime.fromisoformat(match.group(1)) if match else None
 
 
 def previous_period(period: str) -> str:
