@@ -40,6 +40,6 @@ Both tables reproduce the two known worked examples exactly. "Critical" is reach
 ## Consequences
 
 - Twelve cells (Impact) plus nine cells (Risk Rating) are judgment calls made once, here, rather than derived — auditable at a glance, and adjustable cell-by-cell if a specific combination reads wrong later, without re-deriving a formula.
-- `report-template-quarterly-audit.md`'s Risk Assessment table placeholder for Impact was `{{Low/Medium/High/Critical}}`; corrected to `{{Low/Medium/High}}` to match — Critical belongs only in the Risk Rating column.
+- `templates/report-template-quarterly-audit.md`'s Risk Assessment table placeholder for Impact was `{{Low/Medium/High/Critical}}`; corrected to `{{Low/Medium/High}}` to match — Critical belongs only in the Risk Rating column.
 - Both tables belong in `policy-config.yaml` once that file exists (planned next session) — they're exactly the kind of parametric, machine-consumed input that file is for, distinct from `access-control-policy.md`'s human-readable prose.
 - Extending System Criticality or Access Level to a new value (a sixth Information System, or a new access tier) means extending these tables by hand, not recomputing a formula — an explicit, visible edit rather than a silent behavior change.
