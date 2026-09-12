@@ -123,6 +123,18 @@ jobs:
     environment: quarterly-release-approval
     steps:
       - uses: actions/checkout@v4
+        with:
+          # actions/checkout's default ref resolves to github.sha, which is
+          # pinned to the commit that triggered this whole workflow run -
+          # predating quarterly-report's own commits (made via the Contents
+          # API, not local git, mid-run). Without this override, this
+          # checkout misses those commits and create_quarterly_release
+          # fails with FileNotFoundError on the just-written report files.
+          # github.ref is the triggering branch itself (e.g. refs/heads/
+          # main), which checkout resolves to that branch's current tip -
+          # including quarterly-report's commits - at the time THIS job
+          # actually runs.
+          ref: ${{ github.ref }}
         # Runs AFTER quarterly-report's commits landed on main - this
         # checkout picks them up, which is what create_quarterly_release
         # reads from rather than re-deriving the report content.
