@@ -4,7 +4,7 @@
 
 ## Context
 
-`iam-review-agent-design.md`'s Local vs. remote section deferred this as an ADR candidate until implementation surfaced whether it was a real problem, rather than speculating about it upfront. Milestone 2 (`open_issue`, the agent's first real write) is that implementation.
+`design-doc.md`'s Local vs. remote section deferred this as an ADR candidate until implementation surfaced whether it was a real problem, rather than speculating about it upfront. Milestone 2 (`open_issue`, the agent's first real write) is that implementation.
 
 The core question: how does the same `open_issue` code run safely against fixture data during development, in eval/CI, and against a real GitHub repo, without three separate code paths to keep in sync — and without every local run risking an accidental write.
 

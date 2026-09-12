@@ -1,6 +1,6 @@
 # Future Capabilities
 
-Reasoning-capability candidates surfaced during design but not built for this project's current scope — genuinely developed sketches (why each clears the "does this need AI, not just automation" bar, a concrete artifact shape), not just names on a list. Each stays here until (if ever) picked up as real scope, at which point it moves into `iam-review-agent-design.md` and `SPEC.md` proper. None are scheduled; nothing in `development-plan.md` commits to building any of them.
+Reasoning-capability candidates surfaced during design but not built for this project's current scope — genuinely developed sketches (why each clears the "does this need AI, not just automation" bar, a concrete artifact shape), not just names on a list. Each stays here until (if ever) picked up as real scope, at which point it moves into `design-doc.md` and `SPEC.md` proper. None are scheduled; nothing in `development-plan.md` commits to building any of them.
 
 For mechanisms that *are* built but not fully activated (Dormant admin-level's/ad-hoc's and Drift's own Operational cadence; the grant-time Unapproved gate; contractor end-date expiry) — see `SPEC.md` §8's "Out of scope" list instead. Those are smaller and tightly coupled to existing categories.
 
@@ -18,7 +18,7 @@ Distinct from Predictive prioritization (that forecasts whether one open finding
 
 ## Policy-to-config drift detection: same engine, self-directed
 
-Does verifying that `policy-config.yaml`/`role-access-mapping.yaml` still faithfully reflect `access-control-policy.md`'s prose need AI, or is a diff enough? Surfaced from an accepted risk `iam-review-agent-design.md` and ADR-0004 both already name — the policy/config split can drift out of alignment, judged acceptable at the time, before a reasoning engine existed that could check it cheaply.
+Does verifying that `policy-config.yaml`/`role-access-mapping.yaml` still faithfully reflect `access-control-policy.md`'s prose need AI, or is a diff enough? Surfaced from an accepted risk `design-doc.md` and ADR-0004 both already name — the policy/config split can drift out of alignment, judged acceptable at the time, before a reasoning engine existed that could check it cheaply.
 
 A literal diff/checksum doesn't count — fires on every legitimate edit, not just ones introducing a mismatch, pure noise. Semantic comparison does: confirming `access-control-policy.md`'s "dormant and unused for more than 90 consecutive days" still matches `policy-config.yaml`'s `admin_level_days: 90` is reading comprehension against a specific value, not a string match — citing which Principle, which config key, rather than asserting a verdict with no traceable basis. Same restraint property as Identity resolution: decline to assert drift when a mapping is genuinely ambiguous rather than guessing.
 

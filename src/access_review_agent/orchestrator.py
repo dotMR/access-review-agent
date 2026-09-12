@@ -92,7 +92,7 @@ async def run_full_reconciliation(
     commit today); duplicate-Issue prevention (passed to open_issue as
     `skip_reopen_keys` - see its own docstring for the key and why);
     and Remediation re-check (SPEC.md §8's "remediation re-check/
-    auto-close," iam-review-agent-design.md's "Closing the loop" -
+    auto-close," design-doc.md's "Closing the loop" -
     close_remediated_issues, called once per system with that system's
     own just-detected `findings`, since only fresh per-system detection
     can know whether a finding is still true - unlike the other two
@@ -128,7 +128,7 @@ async def run_full_reconciliation(
     skip_reopen_keys = None
     if all_issues is not None:
         # Every OPEN Issue's key, plus every CLOSED accepted-risk Issue's -
-        # accepted risk has no expiry (iam-review-agent-design.md), so a
+        # accepted risk has no expiry (design-doc.md), so a
         # still-detected finding whose Issue was formally accepted must
         # stay suppressed even after closing. A REMEDIATED closure is
         # deliberately excluded: a fixed-then-later-recurring finding is

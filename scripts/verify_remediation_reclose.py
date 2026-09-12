@@ -1,5 +1,5 @@
 """Regression guard for lifecycle.py's close_remediated_issues (SPEC.md
-§8, iam-review-agent-design.md's "Closing the loop"): confirms
+§8, design-doc.md's "Closing the loop"): confirms
 run_full_reconciliation actually closes an open Issue once its finding
 is genuinely gone from a system's own current detection.
 

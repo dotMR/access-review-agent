@@ -47,7 +47,7 @@ One of these is generated per Information System (AWS, GitHub, Salesforce, Finan
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
 | {{identifier}} | {{access_level}} | {{resolved individual / documented exception / unresolved}} | {{provisioning_note excerpt or name-match basis}} | {{date_detected}} | {{status}} | [#{{issue_number}}]({{issue_url}}) |
 
-Only unresolved and stale-ownership outcomes are findings (see iam-review-agent-design.md, Identity resolution); a clean resolution to an individual or a documented exception isn't a finding and doesn't get a row here.
+Only unresolved and stale-ownership outcomes are findings (see design-doc.md, Identity resolution); a clean resolution to an individual or a documented exception isn't a finding and doesn't get a row here.
 
 ### Drift
 
