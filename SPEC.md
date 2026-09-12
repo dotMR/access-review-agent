@@ -2,7 +2,7 @@
 
 This is the settled *what*: data shapes, trigger/dispatch rules, tool registry, finding definitions, report structure, and guardrails. It's implementation-facing, not a rationale document.
 
-For *why*, see `iam-review-agent-design.md` (design rationale) and `docs/adr/` (architecturally significant decisions). For vocabulary and actors, see `CONTEXT.md`. For the formal policy this agent enforces, see `access-control-policy.md`.
+For *why*, see `design-doc.md` (design rationale) and `docs/adr/` (architecturally significant decisions). For vocabulary and actors, see `CONTEXT.md`. For the formal policy this agent enforces, see `access-control-policy.md`.
 
 **Status:** v1 complete — all 12 milestones built and merged; see `development-plan.md` for the full build story.
 
@@ -167,7 +167,7 @@ Both tables are hand-authored and fixed, the same discipline as the dormant-acce
 
 ## 6. Reports
 
-Two evidentiary tiers plus one informational report, per `iam-review-agent-design.md` and the three templates. No two reports repeat another's line-item content — each links out instead.
+Two evidentiary tiers plus one informational report, per `design-doc.md` and the three templates. No two reports repeat another's line-item content — each links out instead.
 
 | Report | Template | Path | Cadence | Signed by | Content |
 | :-- | :-- | :-- | :-- | :-- | :-- |
@@ -185,7 +185,7 @@ Every quarter also produces a tagged **GitHub Release**, pinning the commit (cod
 
 ## 7. Guardrails
 
-From `iam-review-agent-design.md`'s Guardrails section, restated as commitments:
+From `design-doc.md`'s Guardrails section, restated as commitments:
 
 - **Tool-permission scoping** — no grant/revoke capability anywhere in the registry (§3).
 - **Grounding/citation checks** — every Finding must cite the exact source record; a validation step confirms it exists with the claimed properties before it becomes an Issue. Runs once per run, in the main agent (ADR-0001). Proven by eval case 37 (`eval-cases.md`).
@@ -203,4 +203,4 @@ From `iam-review-agent-design.md`'s Guardrails section, restated as commitments:
 Orphaned (both variants), Dormant admin-level (Evidentiary only), Dormant ad-hoc (Evidentiary only), Unapproved (Evidentiary only), Identity resolution, Drift (Evidentiary only), Risk Assessment synthesis, Unremediated-findings Escalation (fires at most once per Finding — ADR-0003), the Monthly Operational Flags summary (runs full detection monthly to catch quiet systems, but stays informational — not evidentiary, no SLA, no Escalation eligibility — ADR-0003), the trend line, remediation re-check/auto-close, Accepted Risk, PDF generation for the aggregate report (Markdown → HTML → PDF via `markdown` + `xhtml2pdf`, both pure Python — a mechanical rendering step with no reasoning in it, so eval cases still test Markdown content only and don't cover PDF output; built in Milestone 11 once the Release Gate needed a real PDF asset, having originally been deferred here for the same "no reasoning in it" reason).
 
 **Out of scope:**
-Dormant admin-level's monthly Operational variant, Dormant ad-hoc's own monthly Operational variant, Drift's monthly Operational variant, the grant-time Unapproved gate, contractor end-date expiry detection. Each of the three monthly Operational variants is a deliberate product boundary (Escalation reserved for genuinely acute risk, per Orphaned), not a cost cut — see `iam-review-agent-design.md` for the reasoning. See `future-capabilities.md` for larger, more substantial candidate capabilities (Predictive prioritization, Certification-triage by novelty, Policy-to-config drift detection) kept separate from this list given their depth.
+Dormant admin-level's monthly Operational variant, Dormant ad-hoc's own monthly Operational variant, Drift's monthly Operational variant, the grant-time Unapproved gate, contractor end-date expiry detection. Each of the three monthly Operational variants is a deliberate product boundary (Escalation reserved for genuinely acute risk, per Orphaned), not a cost cut — see `design-doc.md` for the reasoning. See `future-capabilities.md` for larger, more substantial candidate capabilities (Predictive prioritization, Certification-triage by novelty, Policy-to-config drift detection) kept separate from this list given their depth.

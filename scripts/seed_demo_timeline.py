@@ -1,4 +1,4 @@
-"""Milestone 12 seeding/scenario-generation tool (iam-review-agent-design.md,
+"""Milestone 12 seeding/scenario-generation tool (design-doc.md,
 "Demo timeline"; concrete sequence in demo-timeline.md).
 
 Produces demo-timeline.md's 14 numbered data commits against a real target

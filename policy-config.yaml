@@ -9,7 +9,7 @@
 # Manually maintained to match access-control-policy.md's Principles; no
 # auto-generation or validation step in either direction (accepted drift
 # risk, same precedent as role-access-mapping.yaml — see
-# iam-review-agent-design.md, Data and config formats).
+# design-doc.md, Data and config formats).
 
 dormant_thresholds:
   # access-control-policy.md, Dormant Admin-level access / Dormant Ad-hoc access Principles

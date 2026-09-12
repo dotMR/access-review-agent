@@ -2,7 +2,7 @@ name: Eval Suite
 
 # Separate from the (not-yet-built) production workflow - triggered on any
 # PR touching agent code/prompts/tools, not on a schedule. Per
-# iam-review-agent-design.md's Evals section: this is the quality gate,
+# design-doc.md's Evals section: this is the quality gate,
 # the production workflow is the operational cadence, and conflating the
 # two would mean each interferes with the other.
 on:

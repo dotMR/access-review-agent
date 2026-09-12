@@ -113,7 +113,7 @@ def close_remediated_issues(
 ) -> list[int]:
     """Close every open Issue for `system_name` whose finding is no longer
     present in `current_findings` - SPEC.md §8's "remediation re-check/
-    auto-close," iam-review-agent-design.md's "Closing the loop": each
+    auto-close," design-doc.md's "Closing the loop": each
     run compares currently-open findings against current data; anything
     no longer present gets its Issue closed, not left dangling. A real,
     previously-missing capability, caught live during Milestone 12's

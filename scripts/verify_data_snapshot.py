@@ -1,5 +1,5 @@
 """Regression guard for the per-system/aggregate reports' Data snapshot
-field (iam-review-agent-design.md's "tagging the exact commit, pinning
+field (design-doc.md's "tagging the exact commit, pinning
 code, policy, and data snapshot together").
 
 Why this exists: found during the second live trial's report review -

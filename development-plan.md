@@ -21,7 +21,7 @@ The production workflow stays deferred to Milestone 5 (needs dispatch/Issue-writ
 
 ## Milestone 2 — First real write: `open_issue`, reusing the grounding gate
 
-Add `open_issue` (title/body/label format from `SPEC.md` §4), gated by Milestone 1's `validate_finding()` — reused unchanged. This is also where the local-vs-remote ADR gets formally filed: the design was already sketched in `iam-review-agent-design.md`, so filing it here is transcription plus whatever the real build surfaced. Dry-run adapter first, real GitHub API second.
+Add `open_issue` (title/body/label format from `SPEC.md` §4), gated by Milestone 1's `validate_finding()` — reused unchanged. This is also where the local-vs-remote ADR gets formally filed: the design was already sketched in `design-doc.md`, so filing it here is transcription plus whatever the real build surfaced. Dry-run adapter first, real GitHub API second.
 
 **Proves:** the agent can write to a real external system, and the grounding guardrail gates that write path too, not just detection.
 **Gate:** a real Issue opened against a scratch repo with correct title/body/labels (verified by hand); Tier 3 cases 37 and 41 pass automatically in CI via `scripts/run_milestone2.py`, dry-run only.
@@ -139,7 +139,7 @@ Ran `demo-timeline.md`'s seeding tool and every trigger (`production.yml`, `mont
 
 **Duplicate-Issue prevention needed building, then fixing twice more.** Re-running detection against unchanged data opened a second Issue for an already-open finding. The fix's own `system_of()` helper then broke the moment an Issue carried a third label (`accepted-risk`), producing a wrong dedup key. And accepted-risk Issues — closed, but still genuinely detected every run — weren't in the dedup set at all, re-surfacing a formally-reviewed finding as new.
 
-**Remediation re-check/auto-close didn't exist.** `SPEC.md` §8 and `iam-review-agent-design.md`'s "Closing the loop" both described it, and `demo-timeline.md`'s own commit 12 depended on it — but Milestone 9 built Escalation and Accepted Risk and never this third mechanic. A still-open Issue whose access had genuinely been revoked just stayed open.
+**Remediation re-check/auto-close didn't exist.** `SPEC.md` §8 and `design-doc.md`'s "Closing the loop" both described it, and `demo-timeline.md`'s own commit 12 depended on it — but Milestone 9 built Escalation and Accepted Risk and never this third mechanic. A still-open Issue whose access had genuinely been revoked just stayed open.
 
 **An EM-style code review**, run deliberately to close out this milestone, found one Blocking gap: no exception handling on the write path (`open_issue`, `close_issue`, `apply_label`, `add_comment`) — a transient GitHub API failure on one finding would have aborted the entire run. Fixed the same way every other failure category already was: isolated per-item, loud, non-fatal. Remaining lower-priority findings are tracked in `tech-debt.md`.
 

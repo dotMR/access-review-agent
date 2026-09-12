@@ -1,6 +1,6 @@
 """Dry-run-capable GitHub adapter.
 
-Per iam-review-agent-design.md's Local vs. remote section: a single
+Per design-doc.md's Local vs. remote section: a single
 entrypoint, with the one thing that genuinely differs between local and
 remote (talking to GitHub) isolated behind a flag - real API calls in one
 implementation, logging-only in another. Dry-run is the default: real

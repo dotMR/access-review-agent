@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-Lightweight ADRs for the Access Review Agent: Context / Decision / Consequences, one file per decision, four-digit zero-padded numbering, never renumbered or deleted even if superseded. See `template.md` for the format and `iam-review-agent-design.md`'s "Decision record" section for why this convention exists.
+Lightweight ADRs for the Access Review Agent: Context / Decision / Consequences, one file per decision, four-digit zero-padded numbering, never renumbered or deleted even if superseded. See `template.md` for the format and `design-doc.md`'s "Decision record" section for why this convention exists.
 
 ## Index
 
