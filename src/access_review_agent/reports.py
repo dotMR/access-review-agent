@@ -50,10 +50,13 @@ SYSTEM_DISPLAY = {
 SYSTEM_LABEL = {name: name.replace("_", "-") for name in SYSTEM_ORDER}
 
 MODEL_NOTE = (
-    "Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, and Drift findings are "
-    "determined by deterministic rule-based checks - no AI model involved. Identity "
-    "resolution findings, which require judgment on ambiguous cases, are determined "
-    "using Claude Haiku 4.5 (Anthropic)."
+    "- **Model:**\n"
+    # 4-space indent, not 2 - the `markdown` package (this project's own PDF
+    # export pipeline) only nests a sub-list at 4 spaces, unlike GitHub's
+    # renderer which accepts 2. Confirmed by testing both renderers directly.
+    "    - Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, Drift: deterministic "
+    "rule-based checks, no AI model involved\n"
+    "    - Identity resolution: Claude Haiku 4.5 (Anthropic), for judgment on ambiguous cases"
 )
 
 RISK_ASSESSMENT_NOT_PROVIDED = (
@@ -306,7 +309,7 @@ def build_per_system_report(
         "",
         f"- **Report generated:** {generated_at}",
         f"- **Data snapshot:** {data_snapshot_ref}",
-        f"- **Model:** {MODEL_NOTE}",
+        MODEL_NOTE,
         f"- **Reporting period:** {period}",
         f"- **Asset Owner:** {asset_owner_name}",
         f"- **Committed to:** `reports/{period}/{system_name}.md`",
@@ -486,7 +489,7 @@ def build_aggregate_report(
         "",
         "- **Report generated:** " + generated_at,
         f"- **Data snapshot:** {data_snapshot_ref}",
-        f"- **Model:** {MODEL_NOTE}",
+        MODEL_NOTE,
         f"- **Reporting period:** {period}",
         "- **Systems in scope:** AWS, GitHub, Salesforce, Finance ERP, VPN",
         "- **ISO 27001:2022 controls addressed:** A.5.15 (Access control), A.5.16 (Identity "
