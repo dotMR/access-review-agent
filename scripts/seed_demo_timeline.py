@@ -410,6 +410,16 @@ STEPS: list[Step] = [
     ),
     Step("q2-monthly", "Trigger monthly-report.yml, period=2026-05 - informational re-confirmation of GitHub's dormant admin (step 3b), already caught by q2-push-2 above", "checkpoint"),
     Step("13", "Accepted risk: label the Q1 Identity-resolution Issue (from commit 8) - human action", "manual"),
+    Step(
+        "q2-monthly-2",
+        "Trigger monthly-report.yml, period=2026-06 - labeling an Issue accepted-risk (step 13) doesn't "
+        "close it by itself; only the next reconciliation pass does (generate_quarterly_reports does no "
+        "fresh detection or reconciliation of its own, orchestrator.py's run_full_reconciliation - this "
+        "monthly report's own mechanism - is what actually calls close_accepted_risk_issues). This step "
+        "runs that reconciliation before Q2's quarterly audit reads final state, so the accepted-risk "
+        "Issue is genuinely closed by the time the quarterly report renders it, not just labeled.",
+        "checkpoint",
+    ),
     Step("q2-quarterly", "Trigger quarterly-audit.yml, period=2026-Q2 (approve the create-release gate)", "checkpoint"),
     Step("14", "Second termination: Cecilia Tisio (sharpest Identity resolution case)", "data", step_14),
     Step(
