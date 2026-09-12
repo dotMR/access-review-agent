@@ -390,7 +390,12 @@ STEPS: list[Step] = [
         "Unapproved VPN access for real. Must land before step 10b corrects it: this is demo-timeline.md's "
         "dedicated Risk Assessment contrast case (\"flagged and remediated within the same quarter\"), which "
         "needs a real Issue to actually open before it can be remediated - batching 10+10b into one push "
-        "means detection never sees the violation at all, and the Issue never opens.",
+        "means detection never sees the violation at all, and the Issue never opens. This run also proves "
+        "\"Escalation fires once\" for real: the lifecycle check it runs is unconditional over every open "
+        "Issue, not scoped to VPN, so it re-checks Ronnis Pawgood's still-open, already-escalated Orphaned "
+        "Issue (#9) from Q1 too - escalate_overdue_issues skips any Issue already carrying the escalated "
+        "label unconditionally, so no second escalation comment gets posted here, even though the same-day "
+        "SLA remains missed. #9 stays open, still escalated, until commit 12 remediates it.",
         "checkpoint",
     ),
     Step("11", "Role change (mover): Karl Dandleton, Software Engineer -> Asset Owner (Drift)", "data", step_11),
