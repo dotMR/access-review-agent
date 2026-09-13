@@ -8,10 +8,9 @@ name: Production Review
 # file never fires this workflow at all - see src/access_review_agent/
 # dispatch.py and eval-cases.md cases 25-28.
 #
-# GITHUB_WRITE_MODE stays unset here (dry-run, ADR-0007's default) -
-# there's no data/ directory yet for this to run against for real, and
-# flipping it to real mode is a deliberate, separate decision once the
-# demo dataset exists (see development-plan.md, Milestone 5).
+# GITHUB_WRITE_MODE=real (ADR-0008): this repo is the live demo target,
+# not a dry-run placeholder - real Issues opened here are the project's
+# own evidentiary record, per demo-timeline.md.
 on:
   push:
     branches: [main]
@@ -75,6 +74,10 @@ jobs:
           cat changed_files.txt
 
       - name: Run dispatch + reconciliation
+        env:
+          GITHUB_WRITE_MODE: real
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           export CHANGED_FILES="$(cat changed_files.txt)"
           uv run python scripts/run_production.py

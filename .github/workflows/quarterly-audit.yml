@@ -8,9 +8,8 @@ name: Quarterly Audit Report
 # manually (e.g. for this first, data-free build); the schedule trigger
 # is wired for the real quarterly cadence once live data exists.
 #
-# GITHUB_WRITE_MODE stays unset here (dry-run, ADR-0007's default) - same
-# reasoning as production.yml: no live data yet, going live is a
-# deliberate later decision, not a side effect of wiring the trigger.
+# GITHUB_WRITE_MODE=real (ADR-0008): this repo is the live demo target,
+# not a dry-run placeholder.
 #
 # generate_narrative is a separate, dedicated gate from GITHUB_WRITE_MODE
 # (Milestone 8): Risk Assessment narrative synthesis is a real Anthropic
@@ -97,6 +96,9 @@ jobs:
           # trigger, which run_quarterly_reports.py's "== true" check
           # correctly treats as disabled - no separate branching needed.
           ENABLE_RISK_ASSESSMENT_NARRATIVE: ${{ inputs.generate_narrative }}
+          GITHUB_WRITE_MODE: real
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: uv run python scripts/run_quarterly_reports.py
 
       - name: Post aggregate report to job summary for reviewer visibility
@@ -150,4 +152,6 @@ jobs:
       - name: Create Release
         env:
           PERIOD: ${{ needs.quarterly-report.outputs.period }}
+          GITHUB_WRITE_MODE: real
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: uv run python scripts/create_quarterly_release.py
