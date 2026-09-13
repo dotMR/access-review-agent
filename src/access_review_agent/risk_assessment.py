@@ -268,17 +268,29 @@ def build_risk_assessment_entries(
         for issue in category_issues:
             fields = parse_issue_body(issue.body)
             access_level = _extract_access_level(fields.get("access_detail", ""))
-            # A remediated finding is resolved, full stop - "recurring"
-            # only means something for a still-live problem (Open or
-            # Accepted risk). Skipping the backward-walk here rather than
-            # teaching it about status: an Issue can never legitimately
-            # go Remediated -> Open again under the same number (a later
-            # recurrence of the same problem gets a fresh Issue - the
+            # count_consecutive_periods counts how many periods this Issue's
+            # NUMBER appeared in the category's report section, with no
+            # regard to what STATUS it held in each of those periods. For a
+            # finding that was genuinely Open in earlier periods and only
+            # became Remediated or Accepted-risk just now, that raw count
+            # gets misread as if the current disposition had been true the
+            # whole span - e.g. Issue #5, Open in Q1 and accepted as risk
+            # for the first time in Q2, described in Q2's own report as
+            # "persisting as an accepted risk across two consecutive audit
+            # cycles." False: the manual acceptance determination happened
+            # exactly once, this quarter, not across a span where it was
+            # already accepted. Consistent with CONTEXT.md's own Accepted
+            # Risk definition too ("No expiry planned in v1 - the underlying
+            # condition is never re-reviewed or re-surfaced automatically
+            # once accepted") - once closed, a finding is settled, not an
+            # ongoing pattern to keep scoring. An Issue can never legitimately
+            # go back to Open under the same number once closed either way (a
+            # later recurrence of the same problem gets a fresh Issue - the
             # duplicate-Issue-prevention design's own "a fixed-then-later-
-            # recurring finding is a genuinely new instance" rule), so
-            # count_consecutive_periods's own multi-period walk is only
-            # ever meaningful for an issue that's still open right now.
-            if status_of(issue) == "Remediated":
+            # recurring finding is a genuinely new instance" rule), so the
+            # multi-period walk is only ever meaningful for an issue that's
+            # still open right now.
+            if status_of(issue) in ("Remediated", "Accepted risk"):
                 consecutive = 1
             else:
                 consecutive = count_consecutive_periods(issue.number, category, period, checkout_dir, system_name)
