@@ -9,9 +9,8 @@ name: Monthly Operational Flags
 # makes still runs Escalation/Accepted-Risk lifecycle checks as always
 # (Milestone 9), independent of this report.
 #
-# GITHUB_WRITE_MODE stays unset here (dry-run, ADR-0007's default) - same
-# reasoning as production.yml/quarterly-audit.yml: no live data yet,
-# going live is a deliberate later decision.
+# GITHUB_WRITE_MODE=real (ADR-0008): this repo is the live demo target,
+# not a dry-run placeholder.
 on:
   workflow_dispatch:
     inputs:
@@ -29,11 +28,10 @@ on:
 permissions:
   issues: write
   # generate_monthly_reports commits one report per system (commit_report,
-  # SPEC.md §6) - this needs write, not read. Found and fixed during
-  # Milestone 12's scratch-repo live trial: contents: read never bit
-  # anything before now, since GITHUB_WRITE_MODE has always stayed unset
-  # here (dry-run never calls the real commit API), but it would have
-  # 403'd the moment this workflow first went to real write mode.
+  # SPEC.md §6) - this needs write, not read. Found during Milestone 12's
+  # scratch-repo live trials, before GITHUB_WRITE_MODE=real ever ran here
+  # for real (ADR-0008): contents: read would have 403'd on the first
+  # real commit.
   contents: write
 
 # Same shared group as production.yml, and for the same reason (Milestone
@@ -86,4 +84,7 @@ jobs:
       - name: Run full reconciliation and commit monthly reports
         env:
           PERIOD: ${{ steps.period.outputs.period }}
+          GITHUB_WRITE_MODE: real
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: uv run python scripts/run_monthly_reports.py
