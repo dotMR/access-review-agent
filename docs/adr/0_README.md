@@ -13,3 +13,4 @@ Lightweight ADRs for the Access Review Agent: Context / Decision / Consequences,
 | [0005](./0005-issue-lifecycle-escalation-and-accepted-risk-closure.md) | Issue lifecycle semantics: Escalation mechanism and Accepted Risk closure | Accepted |
 | [0006](./0006-no-model-call-for-deterministic-categories.md) | No model call at all for deterministic (Tier 1) categories | Accepted |
 | [0007](./0007-local-vs-remote-dry-run-adapter.md) | Local-vs-remote parity via a dry-run-capable adapter | Accepted |
+| [0008](./0008-go-live-with-real-demo-data-in-main-repo.md) | Going live with real demo data in the main repo | Accepted |
