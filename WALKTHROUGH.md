@@ -1,6 +1,6 @@
 # Guided Walkthrough
 
-This repo's `data/`, `reports/`, and Issue tracker aren't hypothetical — they're this project's own live evidentiary record, produced by running `demo-timeline.md`'s scenario for real against real GitHub state. This walkthrough is a tour through the three quarters it produced: what happened, what each beat demonstrates, and exactly where to look, linking every claim to the real Issue, report, or Release behind it.
+This repo's `data/`, `reports/`, and Issue tracker aren't hypothetical — they're this project's own live evidentiary record, produced by running `demo-timeline.md`'s scenario for real against real GitHub state. This walkthrough is a tour through the three quarters it produced: what happened, what it demonstrates, and exactly where to look, linking every claim to the real Issue, report, or Release behind it.
 
 **Before you start:** [Issues](https://github.com/dotMR/access-review-agent/issues?q=is%3Aissue) is the live, continuously-updated source of truth — everything below just points you to the right ones at the right time. One thing worth knowing going in: a closed Issue isn't always a fixed one — applying the `accepted-risk` label closes the Issue the same way remediation does, so check for that label before assuming access was revoked (see `access-control-policy.md`'s Accepted Risk principle for the full reasoning).
 
