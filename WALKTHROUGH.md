@@ -20,13 +20,13 @@ Five findings opened from a clean repo — every category gets its first real Is
 
 **The live escalation, start to finish.** Issue #63 opened the same day Ronnis Pawgood was terminated. The next real day, elapsed time (not a simulated date) pushed it past its same-day SLA — the agent's own re-check caught it and posted [the escalation comment](https://github.com/dotMR/access-review-agent/issues/63#issuecomment-5659991728), applying the `escalated` label.
 
-**Read:** [Q1 aggregate report](https://github.com/dotMR/access-review-agent/blob/main/reports/2026-Q1/aggregate.md) · [Q1 Release](https://github.com/dotMR/access-review-agent/releases/tag/2026-Q1)
-
 Every Risk Assessment row here is isolated — nothing has had a second quarter yet to show a pattern.
+
+**Read:** [Q1 aggregate report](https://github.com/dotMR/access-review-agent/blob/main/reports/2026-Q1/aggregate.md) · [Q1 Release](https://github.com/dotMR/access-review-agent/releases/tag/2026-Q1)
 
 ---
 
-## Q2 2026 — remediation, a same-quarter flag-and-fix, an escalation that doesn't repeat, and accepted risk settled in the same quarter it's decided
+## Q2 2026 — remediation, escalation, and accepted risk
 
 | What happened | Issue | What to notice |
 | :-- | :-- | :-- |
@@ -40,15 +40,15 @@ Every Risk Assessment row here is isolated — nothing has had a second quarter 
 
 **Bobson Dugnutt's dormant GitHub grant.** Simulating "90 days idle" means editing the access record directly — that edit touches the same file a push already watches, so ordinary push-triggered detection catches it in the same run. The monthly report (`reports/monthly/2026-05/github.md`) independently re-confirms the finding on its own cadence.
 
-**Accepted risk, settled within the quarter it's decided.** Labeling an Issue `accepted-risk` doesn't close it by itself — closing happens on the next reconciliation pass (a push-triggered run, or a monthly report), the same mechanism that closes a remediated Issue. Here, that reconciliation pass ran before Q2's own report generated, so #65 already shows as closed and accepted risk in [Q2's aggregate report](https://github.com/dotMR/access-review-agent/blob/main/reports/2026-Q2/aggregate.md) — read its Risk Assessment row for Identity resolution/VPN: a single, isolated acceptance, Likelihood Low, with no claim of persisting across multiple quarters. It was Open for one quarter, then accepted in the next — the acceptance itself happened exactly once.
-
-**Read:** [Q2 aggregate report](https://github.com/dotMR/access-review-agent/blob/main/reports/2026-Q2/aggregate.md) · [Q2 Release](https://github.com/dotMR/access-review-agent/releases/tag/2026-Q2)
+**Accepted risk, settled within the quarter it's decided.** Labeling an Issue `accepted-risk` doesn't close it by itself — closing happens on the next reconciliation pass (a push-triggered run, or a monthly report), the same mechanism that closes a remediated Issue. Here, that reconciliation pass ran before Q2's own report generated, so #65 already shows as closed and accepted risk in [Q2's aggregate report](https://github.com/dotMR/access-review-agent/blob/main/reports/2026-Q2/aggregate.md) — read its Risk Assessment row for Identity resolution/VPN: a single, isolated acceptance, Likelihood Low, with no claim of persisting across multiple quarters.
 
 **Worth comparing directly:** the Risk Assessment rows for #61 (Finance ERP, 2nd consecutive quarter, High Impact) and #68 (GitHub, brand new, Medium Impact) are the *same category* on two different systems, with two different Impact ratings — the report is making a real criticality distinction, not applying one score uniformly.
 
+**Read:** [Q2 aggregate report](https://github.com/dotMR/access-review-agent/blob/main/reports/2026-Q2/aggregate.md) · [Q2 Release](https://github.com/dotMR/access-review-agent/releases/tag/2026-Q2)
+
 ---
 
-## Q3 2026 — full recurrence range, a second Identity resolution case, and three settled findings that stay settled
+## Q3 2026 — deeper recurrence, a second Identity resolution case
 
 | What happened | Issue | What to notice |
 | :-- | :-- | :-- |
