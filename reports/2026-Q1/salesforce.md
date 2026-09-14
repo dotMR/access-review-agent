@@ -1,0 +1,59 @@
+# Access Review — Salesforce — 2026-Q1
+
+- **Report generated:** 2026-09-14T06:36:03.800079+00:00
+- **Data snapshot:** [`7da17ee`](https://github.com/dotMR/access-review-agent/tree/7da17ee0ad75b43766a5a462dab275fe987179c4)
+- **Model:**
+    - Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, Drift: deterministic rule-based checks, no AI model involved
+    - Identity resolution: Claude Haiku 4.5 (Anthropic), for judgment on ambiguous cases
+- **Reporting period:** 2026-Q1
+- **Asset Owner:** TBD
+- **Committed to:** `reports/2026-Q1/salesforce.md`
+
+One of these is generated per Information System (AWS, GitHub, Salesforce, Finance ERP, VPN) each quarter. This is the line-item evidence; the aggregated Quarterly Audit Report links to these rather than repeating their contents.
+
+## Summary
+
+| Category | Open | Remediated | Accepted risk | Total |
+| :-- | --: | --: | --: | --: |
+| Orphaned access | 0 | 0 | 0 | 0 |
+| Dormant admin-level access | 0 | 0 | 0 | 0 |
+| Unapproved access | 0 | 0 | 0 | 0 |
+| Identity resolution | 0 | 0 | 0 | 0 |
+| Drift | 0 | 0 | 0 | 0 |
+| Dormant ad-hoc access | 1 | 0 | 0 | 1 |
+| **Total** | 1 | 0 | 0 | 1 |
+
+## Findings
+
+### Orphaned access
+
+_No findings._
+
+### Dormant admin-level access (90-day threshold)
+
+_No findings._
+
+### Unapproved access
+
+_No findings._
+
+### Identity resolution
+
+_No findings._
+
+### Drift
+
+_No findings._
+
+### Dormant ad-hoc access (180-day threshold)
+
+| Identity | Access detail | Expected per policy | Last used | Days dormant | Status | Issue |
+| :-- | :-- | :-- | :-- | :-- | :-- | :-- |
+| Sleve McDichael | `read` access to salesforce | Role baseline is 'none'; ad-hoc grant unused &gt; 180 consecutive days | 2026-02-15 | 210 | Open | [#62](https://github.com/dotMR/access-review-agent/issues/62) |
+
+## Sign-off
+
+I attest that the findings above for Salesforce have been reviewed and, where applicable, remediated or formally accepted as risk.
+
+- **Asset Owner:** TBD
+- **Date:** _(pending sign-off)_
