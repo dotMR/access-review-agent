@@ -8,11 +8,13 @@ Joiner-mover-leaver access review is normally a periodic, manual checklist — e
 
 It cross-references HR and IT access data against policy to flag orphaned, dormant (admin-level and ad-hoc), unapproved, drifted, and identity-resolution findings, and runs on three triggers: push-triggered whenever a commit touches source access data, HR data, or policy config in this repository; a monthly cron for an informational summary; and a quarterly cron for the formal audit record (`SPEC.md` §2).
 
-**Status:** v1 complete — all 12 milestones built and merged (real detection logic, real GitHub Issue writing, real GitHub Actions dispatch, real Identity resolution via the Agent SDK, real report generation and committing, real Risk Assessment scoring and narrative synthesis, real Escalation/Accepted-Risk lifecycle mechanics, real monthly quiet-system detection, per-system failure isolation, real tagged Releases gated behind human-in-the-loop approval, a full three-quarter demo timeline replayed live end-to-end against a scratch repo); see `development-plan.md` for the full build story. The walkthrough below describes how to review the repository once the agent has run against the seeded demo timeline — there's no live data yet, so none of this exists in the repository today.
+**Status:** v1 complete — all 12 milestones built and merged (real detection logic, real GitHub Issue writing, real GitHub Actions dispatch, real Identity resolution via the Agent SDK, real report generation and committing, real Risk Assessment scoring and narrative synthesis, real Escalation/Accepted-Risk lifecycle mechanics, real monthly quiet-system detection, per-system failure isolation, real tagged Releases gated behind human-in-the-loop approval); see `development-plan.md` for the full build story and `docs/adr/0008-go-live-with-real-demo-data-in-main-repo.md` for the decision to run it for real, here. The three-quarter demo timeline described below has been run for real, against this repository itself — every Issue, report, and Release below is live.
 
 ## Reviewing the repository
 
-Three artifacts, in order of how current they are:
+**Start with [`WALKTHROUGH.md`](./WALKTHROUGH.md)** — a guided, quarter-by-quarter tour through the real Issues, reports, and Releases this repository's own live demo run produced, linking every claim to the actual GitHub artifact behind it.
+
+For reference, three artifacts, in order of how current they are:
 
 1. **GitHub Issues** are the live, continuously-updated source of truth — every Finding gets one the moment it's detected (`SPEC.md` §4), not just at report time. Filter by label to see current state directly: `is:open` for everything still needing attention, `label:escalated` for what's been raised to the Reviewer, `label:accepted-risk` (these are *closed* Issues — see the status note below) for what's been formally accepted rather than fixed. Category labels (`orphaned`, `dormant-admin`, `dormant-ad-hoc`, `unapproved`, `identity-resolution`, `drift`) and system labels (`aws`, `github`, `salesforce`, `finance-erp`, `vpn`) narrow further.
 2. **`reports/monthly/<period>/<system>.md`** is the informational nudge — every currently open finding for one system, refreshed monthly. Useful for a quick read on what's outstanding ahead of the next formal record, but it's explicitly not evidentiary: no sign-off, and closed items (remediated or accepted-risk) don't appear here at all, only what's still open.
@@ -30,4 +32,5 @@ Three artifacts, in order of how current they are:
 - **`future-capabilities.md`** — reasoning-capability candidates considered but not built, kept separate so the design doc stays focused on what actually exists.
 - **`docs/adr/`** — architecturally significant decisions (Context/Decision/Consequences), one file per decision.
 - **`access-control-policy.md`**, **`role-access-mapping.yaml`**, **`policy-config.yaml`** — the policy this agent enforces: human-readable Principles, the Role → Access Mapping and System Criticality, and the machine-consumed thresholds and scoring tables, respectively.
-- **`demo-timeline.md`** — the concrete, commit-by-commit scenario the demo repository's history is seeded from.
+- **`demo-timeline.md`** — the concrete, commit-by-commit scenario this repository's own history is seeded from.
+- **`WALKTHROUGH.md`** — a guided tour through this repository's own live demo run, linking every beat to a real Issue, report, or Release.
