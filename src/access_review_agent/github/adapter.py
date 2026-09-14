@@ -239,6 +239,21 @@ def list_issues(repo_full_name: str, label: str | None = None) -> list[IssueInfo
     """Live GitHub read - not gated by GITHUB_WRITE_MODE, since reading
     has no side effect to guard against, unlike create_issue/commit_report.
     Always makes a real API call (there's no "dry run" of a read).
+
+    GitHub's Issues API (`GET /repos/{owner}/{repo}/issues`, what
+    `repo.get_issues()` calls under the hood) returns pull requests too,
+    not just genuine Issues - PRs are a superset of Issues in GitHub's own
+    data model. Every scratch-repo live trial (Milestone 12) only ever
+    pushed directly to `main`, never opening a real PR there, so this went
+    unnoticed until this repo's own real PRs (#44 onward) and real demo
+    Issues coexisted for the first time (ADR-0008's go-live) - the
+    Release body then read "65 findings... 60 remediated" against a
+    report that correctly said 5, since every merged PR was being counted
+    as a closed, "Remediated" finding. `issue.pull_request` is `None` for
+    a genuine Issue and a real object for a PR (PyGithub's own
+    `Issue.pull_request` property) - the one universal, correct filter,
+    since a PR never carries this project's own category/system labels
+    either, unlike a real Issue.
     """
     token = _resolve_token()
     client = Github(auth=Auth.Token(token)) if token else Github()
@@ -258,6 +273,7 @@ def list_issues(repo_full_name: str, label: str | None = None) -> list[IssueInfo
             html_url=issue.html_url,
         )
         for issue in repo.get_issues(**kwargs)
+        if issue.pull_request is None
     ]
 
 
