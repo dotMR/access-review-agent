@@ -4,8 +4,19 @@ Every real Agent SDK call in this codebase (narrative.py's synthesis and
 judge calls, detection/identity_resolution.py's per-candidate resolution)
 needs the same thing: run one query() to completion and pull the result
 text back out. Extracts via ResultMessage.result, never by stringifying
-raw SDK message objects - see reference/milestone-6-agent-sdk-patterns/
-README.md for why that silently breaks.
+raw SDK message objects.
+
+The non-obvious bug this avoids re-discovering (first hit during the
+Milestone 1 exploration that led to ADR-0006): an early version built the
+result text by concatenating str(message) for every streamed message
+instead. str() on a dataclass containing string fields calls repr() on
+those fields, and repr() of a string escapes real newlines as the
+literal two-character sequence \\n - not an actual newline. A regex
+expecting real whitespace between "```json" and "{" then can't match a
+literal backslash character, and fails with no indication why. The fix:
+message.result on the ResultMessage you get at the end of the stream is
+the clean, already-assembled final text - use that, never a hand-rolled
+concatenation of message reprs.
 """
 
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
