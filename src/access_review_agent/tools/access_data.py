@@ -6,9 +6,7 @@ here. For Tier 1 (deterministic) categories, read_and_validate() is called
 directly from plain Python (see detection/). For Tier 2 (reasoning-
 requiring) categories starting at Milestone 6, make_read_access_data_tool()
 wraps the same function as an Agent SDK tool, pre-bound to one system at
-creation time - no system_name parameter exposed to the model, matching
-the reference pattern in reference/milestone-6-agent-sdk-patterns/, but
-reusing this module's own read_and_validate rather than duplicating it.
+creation time - no system_name parameter exposed to the model.
 """
 
 import csv
