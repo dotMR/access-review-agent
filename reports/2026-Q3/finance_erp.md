@@ -1,7 +1,7 @@
 # Access Review — Finance ERP — 2026-Q3
 
-- **Report generated:** 2026-09-14T07:21:08.083086+00:00
-- **Data snapshot:** [`545ed7e`](https://github.com/dotMR/access-review-agent/tree/545ed7e2ada397aebade1b44568d0e698315601c)
+- **Report generated:** 2026-10-01T05:03:02.025199+00:00
+- **Data snapshot:** [`386e06d`](https://github.com/dotMR/access-review-agent/tree/386e06d85cbe505d78a2c7ccf8c646d742924942)
 - **Model:**
     - Orphaned, Dormant admin-level, Dormant ad-hoc, Unapproved, Drift: deterministic rule-based checks, no AI model involved
     - Identity resolution: Claude Haiku 4.5 (Anthropic), for judgment on ambiguous cases
